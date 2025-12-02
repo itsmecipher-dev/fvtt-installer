@@ -90,6 +90,13 @@ runcmd:
   - systemctl enable fail2ban
   - systemctl start fail2ban
 
+  # Swap (2GB) - prevents out-of-memory errors with heavy modules
+  - fallocate -l 2G /swapfile
+  - chmod 600 /swapfile
+  - mkswap /swapfile
+  - echo '/swapfile swap swap defaults 0 0' >> /etc/fstab
+  - swapon -a
+
   # DigitalOcean Monitoring Agent
   - curl -sSL https://repos.insights.digitalocean.com/install.sh | bash
 
