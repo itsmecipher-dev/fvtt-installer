@@ -16,6 +16,15 @@ interface Props {
 
 type AuthMode = 'credentials' | 'manual'
 
+function extractMajorVersionFromUrl(url: string): number | null {
+  // Extract version from URL like https://r2.foundryvtt.com/releases/12.343/FoundryVTT-12.343.zip
+  const match = url.match(/releases\/(\d+)\.\d+\//)
+  if (match) {
+    return parseInt(match[1], 10)
+  }
+  return null
+}
+
 export function FoundryStep({ state, setFoundry, onNext, onBack }: Props) {
   const [authMode, setAuthMode] = useState<AuthMode>('credentials')
   const [username, setUsername] = useState('')
@@ -74,9 +83,11 @@ export function FoundryStep({ state, setFoundry, onNext, onBack }: Props) {
       }
 
       if (result.url) {
+        const selectedVersionData = foundryApi.FOUNDRY_VERSIONS.find(v => v.value === selectedVersion)
         setFoundry({
           downloadUrl: result.url,
           licenseKey: selectedLicense,
+          majorVersion: selectedVersionData?.generation || 13,
         })
         onNext()
       }
@@ -242,7 +253,14 @@ export function FoundryStep({ state, setFoundry, onNext, onBack }: Props) {
             label="Foundry VTT Download URL"
             placeholder="https://r2.foundryvtt.com/releases/..."
             value={state.foundry.downloadUrl}
-            onChange={(e) => setFoundry({ downloadUrl: e.target.value })}
+            onChange={(e) => {
+              const url = e.target.value
+              const majorVersion = extractMajorVersionFromUrl(url)
+              setFoundry({
+                downloadUrl: url,
+                ...(majorVersion && { majorVersion })
+              })
+            }}
             hint="This is a timed download link from your Foundry account"
           />
 

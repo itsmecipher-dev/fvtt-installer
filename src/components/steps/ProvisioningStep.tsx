@@ -83,6 +83,7 @@ export function ProvisioningStep({
         fullDomain,
         state.foundry.downloadUrl,
         state.foundry.licenseKey,
+        state.foundry.majorVersion,
         spacesConfig,
         { updateHour: state.maintenance.updateHour }
       )

@@ -13,9 +13,12 @@ export function generateCloudInit(
   domain: string,
   foundryDownloadUrl: string,
   foundryLicenseKey: string,
+  foundryMajorVersion: number,
   spacesConfig?: SpacesConfig,
   maintenanceConfig: MaintenanceConfig = { updateHour: 4 }
 ): string {
+  // v13+ uses main.js in root, v12 and earlier use resources/app/main.js
+  const scriptPath = foundryMajorVersion >= 13 ? 'main.js' : 'resources/app/main.js'
   // Strip dashes from license key for license.json format
   const licenseStripped = foundryLicenseKey ? foundryLicenseKey.replace(/-/g, '') : ''
 
@@ -165,13 +168,13 @@ ${licenseStripped ? `
   - cd /home/foundry && unzip -q foundry.zip -d foundryvtt
   - rm /home/foundry/foundry.zip
 
-  # PM2 ecosystem config (v13+ uses main.js in root)
+  # PM2 ecosystem config
   - |
     cat > /home/foundry/ecosystem.config.js << 'EOFPM2'
     module.exports = {
       apps: [{
         name: 'foundry',
-        script: 'main.js',
+        script: '${scriptPath}',
         cwd: '/home/foundry/foundryvtt',
         args: '--dataPath=/home/foundry/foundrydata',
         interpreter: 'node',
