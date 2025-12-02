@@ -15,13 +15,16 @@ export function WizardLayout({ steps, currentStep, children }: WizardLayoutProps
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <header className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">
-            Foundry VTT Cloud Installer
-          </h1>
-          <p className="text-slate-400">
-            Deploy your own Foundry VTT server in minutes
-          </p>
+        <header className="flex items-center justify-center gap-4 mb-8">
+          <img src="/logo.png" alt="" className="w-14 h-14" />
+          <div className="text-left">
+            <h1 className="text-3xl font-bold text-white">
+              Foundry VTT Cloud Installer
+            </h1>
+            <p className="text-slate-400">
+              Deploy your own Foundry VTT server in minutes
+            </p>
+          </div>
         </header>
 
         <nav className="mb-8 overflow-x-auto">
