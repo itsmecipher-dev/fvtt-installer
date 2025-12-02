@@ -342,9 +342,25 @@ export function SummaryStep({ state }: Props) {
 }
 EOF`}</CodeBlock>
               </div>
-              <p className="text-sm text-slate-400 mt-3">
-                Then restart Foundry: <code className="bg-slate-800 px-1 rounded">pm2 restart foundry</code>
-              </p>
+              <ol className="mt-3 space-y-3 text-sm text-slate-300" start={4}>
+                <li className="flex gap-2">
+                  <span className="shrink-0 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold">4</span>
+                  <span>Add the <code className="bg-slate-800 px-1 rounded">awsConfig</code> reference to options.json:</span>
+                </li>
+              </ol>
+              <div className="mt-3">
+                <CodeBlock>{`# Edit the options.json file
+nano /home/foundry/foundrydata/Config/options.json
+
+# Add this line inside the JSON object:
+"awsConfig": "aws.json"`}</CodeBlock>
+              </div>
+              <ol className="mt-3 space-y-3 text-sm text-slate-300" start={5}>
+                <li className="flex gap-2">
+                  <span className="shrink-0 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold">5</span>
+                  <span>Restart Foundry: <code className="bg-slate-800 px-1 rounded">pm2 restart foundry</code></span>
+                </li>
+              </ol>
             </Collapsible>
           </>
         )}
