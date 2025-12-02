@@ -29,6 +29,7 @@ const initialState: WizardState = {
   foundry: {
     downloadUrl: '',
     licenseKey: '',
+    majorVersion: 13,
   },
   server: {
     name: 'foundry-vtt',
