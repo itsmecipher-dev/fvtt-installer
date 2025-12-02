@@ -148,7 +148,7 @@ export function ReviewStep({ state, setServer, setMaintenance, onNext, onBack }:
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between">
               <dt className="text-slate-400">Version</dt>
-              <dd className="text-white">Latest (from URL)</dd>
+              <dd className="text-white">v{state.foundry.majorVersion}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-slate-400">License</dt>
