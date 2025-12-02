@@ -37,11 +37,34 @@ npm run deploy   # deploy to Cloudflare
 
 ## Deployment
 
-Hosted on Cloudflare Pages at [fvtt-installer.artificery.io](https://fvtt-installer.artificery.io)
+This project has two deployment targets:
+
+### Web UI (Cloudflare Pages)
+
+Hosted at [fvtt-installer.artificery.io](https://fvtt-installer.artificery.io)
+
+Auto-deploys on push to `main` via Cloudflare Pages.
 
 Build settings:
 - Build command: `npm run build`
 - Output directory: `dist`
+
+### Worker (Cloudflare Workers)
+
+The CORS proxy worker is deployed separately and must be updated manually when `worker/src/*` changes.
+
+```bash
+cd worker
+npm run deploy
+```
+
+Requires [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/) authenticated with Cloudflare:
+
+```bash
+npx wrangler login
+```
+
+Worker configuration is in `worker/wrangler.toml`. After deployment, the worker is available at `cors-proxy.artificery.io`.
 
 ## License
 
