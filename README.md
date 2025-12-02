@@ -47,20 +47,15 @@ Auto-deploys on push to `main` via GitHub Actions (`.github/workflows/deploy.yml
 
 ### Worker (Cloudflare Workers)
 
-The CORS proxy worker is deployed separately and must be updated manually when `worker/src/*` changes.
+The CORS proxy worker auto-deploys when `worker/**` files change via GitHub Actions.
 
+Requires `CLOUDFLARE_API_TOKEN` secret in repo settings (Settings → Secrets → Actions).
+
+Manual deploy:
 ```bash
 cd worker
 npm run deploy
 ```
-
-Requires [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/) authenticated with Cloudflare:
-
-```bash
-npx wrangler login
-```
-
-Worker configuration is in `worker/wrangler.toml`. After deployment, the worker is available at `cors-proxy.artificery.io`.
 
 ## License
 
