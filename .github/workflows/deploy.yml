@@ -27,6 +27,8 @@ jobs:
 
       - run: npm ci
       - run: npm run build
+        env:
+          VITE_RYBBIT_SITE_ID: ${{ vars.VITE_RYBBIT_SITE_ID }}
 
       - uses: actions/upload-pages-artifact@v3
         with:
