@@ -180,12 +180,7 @@ export function SizeSelector({ sizes, value, onChange }: SizeSelectorProps) {
               >
                 {/* Tier header */}
                 <div className="mb-3">
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-semibold text-white">{tier.title}</span>
-                    <span className="text-xs text-slate-500">
-                      {firstSize.memory / 1024}GB RAM • {firstSize.vcpus} vCPU
-                    </span>
-                  </div>
+                  <span className="font-semibold text-white">{tier.title}</span>
                   <p className="text-sm text-slate-400">{tier.subtitle}</p>
                 </div>
 
@@ -232,9 +227,9 @@ export function SizeSelector({ sizes, value, onChange }: SizeSelectorProps) {
                           <span className="text-xs font-normal text-slate-400">/mo</span>
                         </div>
 
-                        {/* Disk size */}
-                        <div className="text-xs text-slate-400 mt-1">
-                          {size.disk}GB
+                        {/* Specs */}
+                        <div className="text-xs text-slate-300 mt-1">
+                          {size.vcpus} CPU / {size.memory / 1024}GB RAM / {size.disk}GB Disk
                         </div>
 
                         {/* Star ratings */}
