@@ -39,15 +39,11 @@ npm run deploy   # deploy to Cloudflare
 
 This project has two deployment targets:
 
-### Web UI (Cloudflare Pages)
+### Web UI (GitHub Pages)
 
 Hosted at [fvtt-installer.artificery.io](https://fvtt-installer.artificery.io)
 
-Auto-deploys on push to `main` via Cloudflare Pages.
-
-Build settings:
-- Build command: `npm run build`
-- Output directory: `dist`
+Auto-deploys on push to `main` via GitHub Actions (`.github/workflows/deploy.yml`).
 
 ### Worker (Cloudflare Workers)
 
