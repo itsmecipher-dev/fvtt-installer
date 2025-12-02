@@ -26,6 +26,7 @@ export interface WizardState {
   foundry: {
     downloadUrl: string
     licenseKey: string
+    majorVersion: number // 11, 12, 13, etc. - determines startup script path
   }
   server: {
     name: string

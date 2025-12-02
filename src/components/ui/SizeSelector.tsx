@@ -159,7 +159,6 @@ export function SizeSelector({ sizes, value, onChange }: SizeSelectorProps) {
       <div className="space-y-4">
         {tiers.map((tier) => {
           const isTierSelected = tier.sizes.some((s) => s.slug === value)
-          const firstSize = tier.sizes[0]
 
           return (
             <div key={tier.id} className="relative">
