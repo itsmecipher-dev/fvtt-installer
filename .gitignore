@@ -27,3 +27,6 @@ dist-ssr
 
 # Project todos
 /todos
+
+# AI assistant config
+CLAUDE.md
