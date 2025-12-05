@@ -1,15 +1,24 @@
 # Foundry VTT Installer
 
-A web-based wizard for deploying self-hosted Foundry VTT servers on DigitalOcean with Cloudflare DNS.
+A web-based wizard for deploying self-hosted Foundry VTT servers on cloud providers with Cloudflare DNS.
+
+## Supported Providers
+
+| Provider | Compute | Object Storage | Regions |
+|----------|---------|----------------|---------|
+| **DigitalOcean** | Droplets | Spaces (auto-configured) | 14 worldwide |
+| **Hetzner Cloud** | Cloud Servers | Object Storage (manual setup) | 5 (EU + US) |
 
 ## Features
 
 - Step-by-step guided installation
-- DigitalOcean droplet provisioning with region latency testing
-- Optional DigitalOcean Spaces for external asset storage
+- Multi-provider support (DigitalOcean, Hetzner Cloud)
+- Region latency testing for optimal server placement
+- Optional S3-compatible object storage for game assets
 - Cloudflare DNS configuration with automatic SSL
-- Automated server setup via cloud-init
+- Automated server setup via cloud-init (Node.js, Caddy, PM2)
 - SSH key generation for secure access
+- Automatic security updates and firewall configuration
 
 ## Tech Stack
 
@@ -26,7 +35,7 @@ npm run dev
 
 ### Worker (CORS Proxy)
 
-The worker handles API proxying for Cloudflare, DigitalOcean Spaces, and Foundry VTT authentication.
+The worker handles API proxying for Cloudflare, S3-compatible storage (DigitalOcean Spaces, Hetzner Object Storage), and Foundry VTT authentication.
 
 ```bash
 cd worker
