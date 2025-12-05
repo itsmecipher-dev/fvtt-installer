@@ -1,8 +1,18 @@
 import { useState, useCallback } from 'react'
 import type { WizardState, SSHKeyPair } from '../types'
+import type { ProviderId } from '../api/providers/types'
 
 const initialState: WizardState = {
   currentStep: 0,
+  provider: 'digitalocean',
+  compute: {
+    apiKey: '',
+    validated: false,
+    regions: [],
+    sizes: [],
+    selectedRegion: '',
+    selectedSize: '',
+  },
   digitalOcean: {
     apiKey: '',
     validated: false,
@@ -25,6 +35,8 @@ const initialState: WizardState = {
     selectedRegion: null,
     newSpaceName: 'foundry-assets',
     credentials: null,
+    tempKeyId: null,
+    tempKeyCredentials: null,
   },
   foundry: {
     downloadUrl: '',
@@ -60,6 +72,20 @@ export function useWizard() {
   const goToStep = useCallback((step: number) => {
     setState((s) => ({ ...s, currentStep: step }))
   }, [])
+
+  const setProvider = useCallback((provider: ProviderId) => {
+    setState((s) => ({ ...s, provider }))
+  }, [])
+
+  const setCompute = useCallback(
+    (updates: Partial<WizardState['compute']>) => {
+      setState((s) => ({
+        ...s,
+        compute: { ...s.compute, ...updates },
+      }))
+    },
+    []
+  )
 
   const setDigitalOcean = useCallback(
     (updates: Partial<WizardState['digitalOcean']>) => {
@@ -153,6 +179,8 @@ export function useWizard() {
     nextStep,
     prevStep,
     goToStep,
+    setProvider,
+    setCompute,
     setDigitalOcean,
     setCloudflare,
     setSpaces,

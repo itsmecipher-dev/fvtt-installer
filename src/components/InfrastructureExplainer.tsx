@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Globe, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react'
-import { siDigitalocean, siCloudflare } from 'simple-icons'
+import { Globe, ArrowRight, ChevronLeft, ChevronRight, Server } from 'lucide-react'
+import { siCloudflare } from 'simple-icons'
 
 interface Step {
   id: number
@@ -52,7 +52,7 @@ const STEPS: Step[] = [
   {
     id: 4,
     title: 'Traffic reaches your server',
-    description: 'Your DigitalOcean Droplet (a virtual server in the cloud) receives the request. It\'s always on, 24/7.',
+    description: 'Your cloud server (a virtual machine running 24/7) receives the request and processes it.',
     highlight: ['server'],
     connectionActive: ['user-dns', 'dns-cloudflare', 'cloudflare-server'],
   },
@@ -157,7 +157,7 @@ export function InfrastructureExplainer() {
             />
           </div>
 
-          {/* DigitalOcean Server */}
+          {/* Cloud Server */}
           <div
             className={`flex flex-col items-center gap-2 transition-all duration-500 ${
               isHighlighted('server') ? 'scale-110' : 'opacity-40'
@@ -170,9 +170,9 @@ export function InfrastructureExplainer() {
                   : 'bg-slate-700'
               }`}
             >
-              <BrandIcon svg={siDigitalocean.svg} color="white" />
+              <Server className="w-8 h-8 text-white" />
             </div>
-            <span className="text-xs text-slate-400 text-center">DigitalOcean<br/>Droplet</span>
+            <span className="text-xs text-slate-400 text-center">Cloud<br/>Server</span>
           </div>
 
           {/* Connection: Server -> Foundry */}

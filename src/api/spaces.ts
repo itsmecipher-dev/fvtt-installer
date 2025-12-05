@@ -7,33 +7,11 @@ interface SpacesCredentials {
   secretAccessKey: string
 }
 
-export interface SpaceNameCheck {
-  available: boolean
-  reason: string | null
-}
-
-export async function checkSpaceNameAvailable(
-  bucketName: string
-): Promise<SpaceNameCheck> {
-  const res = await fetch(`${CF_PROXY}/spaces/check-name`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ bucketName }),
-  })
-
-  const data = await res.json()
-  return {
-    available: data.available ?? true,
-    reason: data.reason ?? null,
-  }
-}
-
 export async function createSpace(
   credentials: SpacesCredentials,
   region: string,
-  bucketName: string
+  bucketName: string,
+  allowedOrigin?: string
 ): Promise<void> {
   const res = await fetch(`${CF_PROXY}/spaces/create-bucket`, {
     method: 'POST',
@@ -45,6 +23,7 @@ export async function createSpace(
       secretAccessKey: credentials.secretAccessKey,
       region,
       bucketName,
+      allowedOrigin,
     }),
   })
 
@@ -52,6 +31,32 @@ export async function createSpace(
 
   if (!res.ok) {
     throw new Error(data.error || 'Failed to create Space')
+  }
+}
+
+export async function setSpacesCors(
+  credentials: SpacesCredentials,
+  region: string,
+  bucketName: string,
+  allowedOrigin: string
+): Promise<void> {
+  const res = await fetch(`${CF_PROXY}/spaces/set-cors`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      accessKeyId: credentials.accessKeyId,
+      secretAccessKey: credentials.secretAccessKey,
+      region,
+      bucketName,
+      allowedOrigin,
+    }),
+  })
+
+  if (!res.ok) {
+    const data = await res.json()
+    throw new Error(data.error || 'Failed to set CORS')
   }
 }
 

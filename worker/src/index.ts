@@ -1,5 +1,6 @@
 import { handleFoundryAuth, handleFoundryDownload } from './foundry'
-import { handleSpacesCreateBucket, handleSpacesCheckName } from './spaces'
+import { handleSpacesCreateBucket, handleSpacesSetCors } from './spaces'
+import { handleS3Validate, handleS3CreateBucket, handleS3SetCors } from './s3-storage'
 
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
@@ -43,15 +44,33 @@ export default {
       return addCorsHeaders(response, origin)
     }
 
-    // Route: Check if Space name is available
-    if (path === '/spaces/check-name') {
-      const response = await handleSpacesCheckName(request)
-      return addCorsHeaders(response, origin)
-    }
-
     // Route: Spaces bucket creation (proxy to avoid CORS)
     if (path === '/spaces/create-bucket') {
       const response = await handleSpacesCreateBucket(request)
+      return addCorsHeaders(response, origin)
+    }
+
+    // Route: Spaces CORS configuration
+    if (path === '/spaces/set-cors') {
+      const response = await handleSpacesSetCors(request)
+      return addCorsHeaders(response, origin)
+    }
+
+    // Route: Generic S3 credential validation (for Hetzner, etc.)
+    if (path === '/s3/validate') {
+      const response = await handleS3Validate(request)
+      return addCorsHeaders(response, origin)
+    }
+
+    // Route: Generic S3 bucket creation
+    if (path === '/s3/create-bucket') {
+      const response = await handleS3CreateBucket(request)
+      return addCorsHeaders(response, origin)
+    }
+
+    // Route: Generic S3 CORS configuration
+    if (path === '/s3/set-cors') {
+      const response = await handleS3SetCors(request)
       return addCorsHeaders(response, origin)
     }
 
