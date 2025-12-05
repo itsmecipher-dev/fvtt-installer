@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { siDigitalocean, siCloudflare, siCaddy, siPm2 } from 'simple-icons'
+import { siCloudflare, siCaddy, siPm2 } from 'simple-icons'
 import { Button } from '../ui/Button'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Cloud } from 'lucide-react'
 
 interface Props {
   onNext: () => void
@@ -10,7 +10,7 @@ interface Props {
 interface ServiceInfo {
   name: string
   icon: string
-  iconType?: 'svg' | 'img'
+  iconType?: 'svg' | 'img' | 'lucide'
   color: string
   novice: { label: string; details: string }
   expert: { label: string; details: string }
@@ -18,16 +18,17 @@ interface ServiceInfo {
 
 const services: ServiceInfo[] = [
   {
-    name: 'DigitalOcean',
-    icon: siDigitalocean.svg,
+    name: 'Cloud Server',
+    icon: 'cloud',
+    iconType: 'lucide',
     color: '#0080FF',
     novice: {
       label: 'Your server',
-      details: 'A computer in the cloud that runs Foundry for you 24/7. Protected by a firewall that only lets game traffic through.',
+      details: 'A computer in the cloud that runs Foundry for you 24/7. Choose from DigitalOcean or Hetzner based on your region.',
     },
     expert: {
       label: 'Cloud Infrastructure',
-      details: 'Ubuntu 24.04 LTS droplet with UFW firewall (ports 22, 80, 443) and fail2ban for SSH brute-force protection.',
+      details: 'Ubuntu 24.04 LTS server with UFW firewall (ports 22, 80, 443) and fail2ban for SSH brute-force protection.',
     },
   },
   {
@@ -85,11 +86,19 @@ const services: ServiceInfo[] = [
   },
 ]
 
-function ServiceIcon({ icon, iconType, color }: { icon: string; iconType?: 'svg' | 'img'; color: string }) {
+function ServiceIcon({ icon, iconType, color }: { icon: string; iconType?: 'svg' | 'img' | 'lucide'; color: string }) {
   if (iconType === 'img') {
     return (
       <div className="w-12 h-12 flex items-center justify-center">
         <img src={icon} alt="" className="w-10 h-10 object-contain" />
+      </div>
+    )
+  }
+
+  if (iconType === 'lucide') {
+    return (
+      <div className="w-12 h-12 flex items-center justify-center">
+        <Cloud className="w-10 h-10" style={{ color }} />
       </div>
     )
   }
@@ -156,7 +165,7 @@ export function OverviewStep({ onNext }: Props) {
       <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/30">
         <h3 className="font-medium text-blue-400 mb-2">What you'll need</h3>
         <ul className="text-sm text-slate-300 space-y-1">
-          <li>• A DigitalOcean account (get $200 free credit with new signup)</li>
+          <li>• A cloud provider account (DigitalOcean or Hetzner)</li>
           <li>• A Cloudflare account and a domain you own</li>
           <li>• A Foundry VTT license and download link</li>
         </ul>
@@ -166,12 +175,12 @@ export function OverviewStep({ onNext }: Props) {
         <h3 className="font-medium text-white mb-2">Estimated costs</h3>
         <div className="text-sm text-slate-400 space-y-1">
           <div className="flex justify-between">
-            <span>DigitalOcean Droplet</span>
-            <span className="text-slate-300">$6-18/month</span>
+            <span>Cloud Server</span>
+            <span className="text-slate-300">~$4-18/month</span>
           </div>
           <div className="flex justify-between">
-            <span>DigitalOcean Spaces (optional, for large asset libraries)</span>
-            <span className="text-slate-300">$5/month</span>
+            <span>Object Storage (optional, for large asset libraries)</span>
+            <span className="text-slate-300">~$5/month</span>
           </div>
           <div className="flex justify-between">
             <span>Cloudflare DNS</span>

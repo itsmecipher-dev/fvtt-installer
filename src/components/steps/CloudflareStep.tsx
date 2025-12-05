@@ -11,11 +11,12 @@ import type { WizardState } from '../../types'
 interface Props {
   state: WizardState
   setCloudflare: (updates: Partial<WizardState['cloudflare']>) => void
+  setServer: (updates: Partial<WizardState['server']>) => void
   onNext: () => void
   onBack: () => void
 }
 
-export function CloudflareStep({ state, setCloudflare, onNext, onBack }: Props) {
+export function CloudflareStep({ state, setCloudflare, setServer, onNext, onBack }: Props) {
   const [validating, setValidating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [existingRecord, setExistingRecord] = useState<cfApi.DnsRecord | null>(null)
@@ -205,11 +206,14 @@ export function CloudflareStep({ state, setCloudflare, onNext, onBack }: Props) 
             label="Subdomain"
             placeholder="foundry"
             value={state.cloudflare.subdomain}
-            onChange={(e) =>
-              setCloudflare({
-                subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''),
-              })
-            }
+            onChange={(e) => {
+              const subdomain = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+              setCloudflare({ subdomain })
+              // Update server name to match subdomain (if still default)
+              if (state.server.name === 'foundry-vtt' || state.server.name === state.cloudflare.subdomain) {
+                setServer({ name: subdomain || 'foundry-vtt' })
+              }
+            }}
             error={error || undefined}
             hint={fullDomain ? `Your server will be at https://${fullDomain}` : undefined}
           />

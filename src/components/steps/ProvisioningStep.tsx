@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Download, CheckCircle2, Loader2, XCircle, ExternalLink } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Alert } from '../ui/Alert'
-import * as doApi from '../../api/digitalocean'
+import { getCloudProvider, getStorageProvider, getProviderMetadata } from '../../api/providers'
 import * as cfApi from '../../api/cloudflare'
+import * as doApi from '../../api/digitalocean'
 import { generateSSHKeyPair, downloadPrivateKey } from '../../utils/ssh'
 import { generateCloudInit } from '../../utils/cloudinit'
 import type { WizardState, ProvisioningStatus, SSHKeyPair } from '../../types'
@@ -11,6 +12,7 @@ import type { WizardState, ProvisioningStatus, SSHKeyPair } from '../../types'
 interface Props {
   state: WizardState
   setProvisioning: (updates: Partial<WizardState['provisioning']>) => void
+  setSpaces: (updates: Partial<WizardState['spaces']>) => void
   setSshKeyPair: (keyPair: SSHKeyPair) => void
   addLog: (message: string) => void
   onNext: () => void
@@ -30,6 +32,7 @@ const STATUS_LABELS: Record<ProvisioningStatus, string> = {
 export function ProvisioningStep({
   state,
   setProvisioning,
+  setSpaces,
   setSshKeyPair,
   addLog,
   onNext,
@@ -50,6 +53,21 @@ export function ProvisioningStep({
   }, [])
 
   async function runProvisioning() {
+    const provider = state.provider
+    const cloudProvider = getCloudProvider(provider)
+    const storageProvider = getStorageProvider(provider)
+    const providerMeta = getProviderMetadata(provider)
+
+    const apiKey = provider === 'digitalocean'
+      ? state.digitalOcean.apiKey
+      : state.compute.apiKey
+    const selectedRegion = provider === 'digitalocean'
+      ? state.digitalOcean.selectedRegion
+      : state.compute.selectedRegion
+    const selectedSize = provider === 'digitalocean'
+      ? state.digitalOcean.selectedSize
+      : state.compute.selectedSize
+
     try {
       addLog('Starting provisioning process...')
       setProvisioning({ status: 'creating-droplet' })
@@ -59,54 +77,52 @@ export function ProvisioningStep({
       setSshKeyPair(keyPair)
       addLog('SSH key pair generated')
 
-      addLog('Uploading SSH key to DigitalOcean...')
-      const sshKey = await doApi.addSshKey(
-        state.digitalOcean.apiKey,
+      addLog(`Uploading SSH key to ${providerMeta.displayName}...`)
+      const sshKey = await cloudProvider.addSshKey(
+        apiKey,
         `foundry-installer-${Date.now()}`,
         keyPair.publicKey
       )
       addLog(`SSH key uploaded (ID: ${sshKey.id})`)
 
       addLog('Generating server configuration...')
-      const spacesConfig = state.spaces.enabled && state.spaces.credentials
+      const storageConfig = state.spaces.enabled && state.spaces.credentials
         ? {
             accessKeyId: state.spaces.credentials.accessKeyId,
             secretAccessKey: state.spaces.credentials.secretAccessKey,
-            region: state.spaces.selectedRegion || doApi.getSpacesRegions()[0],
+            region: state.spaces.selectedRegion || storageProvider.getRegions()[0]?.slug || '',
             bucket: state.spaces.newSpaceName,
+            endpoint: `https://${storageProvider.getEndpoint(state.spaces.selectedRegion || storageProvider.getRegions()[0]?.slug || '')}`,
           }
         : undefined
-      if (spacesConfig) {
-        addLog(`Spaces storage enabled: ${spacesConfig.bucket}.${spacesConfig.region}.digitaloceanspaces.com`)
+      if (storageConfig) {
+        addLog(`Storage enabled: ${storageConfig.bucket} (${storageConfig.endpoint})`)
       }
       const cloudInit = generateCloudInit(
         fullDomain,
         state.foundry.downloadUrl,
         state.foundry.licenseKey,
         state.foundry.majorVersion,
-        spacesConfig,
+        provider,
+        storageConfig,
         { updateHour: state.maintenance.updateHour }
       )
 
-      addLog('Creating droplet...')
-      const dropletResponse = await doApi.createDroplet(
-        state.digitalOcean.apiKey,
+      addLog(`Creating ${providerMeta.displayName} server...`)
+      const server = await cloudProvider.createServer(
+        apiKey,
         state.server.name,
-        state.digitalOcean.selectedRegion,
-        state.digitalOcean.selectedSize,
+        selectedRegion,
+        selectedSize,
         sshKey.id,
         cloudInit
       )
-      const dropletId = dropletResponse.droplet.id
-      setProvisioning({ dropletId: String(dropletId) })
-      addLog(`Droplet created (ID: ${dropletId})`)
+      setProvisioning({ dropletId: String(server.id) })
+      addLog(`Server created (ID: ${server.id})`)
 
       setProvisioning({ status: 'waiting-for-ip' })
       addLog('Waiting for public IP address...')
-      const ip = await doApi.waitForDropletIp(
-        state.digitalOcean.apiKey,
-        dropletId
-      )
+      const ip = await cloudProvider.waitForServerIp(apiKey, server.id)
       setProvisioning({ dropletIp: ip })
       addLog(`Public IP assigned: ${ip}`)
 
@@ -119,6 +135,37 @@ export function ProvisioningStep({
         ip
       )
       addLog('DNS record created successfully!')
+
+      // Configure CORS for storage bucket if enabled
+      if (state.spaces.enabled && state.spaces.credentials && storageProvider.setCors) {
+        addLog('Configuring CORS for storage bucket...')
+        try {
+          // For DO: use temp full-access key (scoped key can't set CORS)
+          const corsCredentials = state.spaces.tempKeyCredentials || state.spaces.credentials
+          await storageProvider.setCors(
+            corsCredentials,
+            state.spaces.selectedRegion || storageProvider.getRegions()[0]?.slug || '',
+            state.spaces.newSpaceName,
+            `https://${fullDomain}`
+          )
+          addLog('CORS configured successfully!')
+
+          // Delete temp key after CORS is set (DO only)
+          if (state.spaces.tempKeyId && state.provider === 'digitalocean') {
+            try {
+              await doApi.deleteSpacesKey(state.digitalOcean.apiKey, state.spaces.tempKeyId)
+              setSpaces({ tempKeyId: null, tempKeyCredentials: null })
+              addLog('Cleaned up temporary access key')
+            } catch {
+              addLog('Warning: Could not delete temporary key (non-critical)')
+            }
+          }
+        } catch (corsErr) {
+          const corsMsg = corsErr instanceof Error ? corsErr.message : 'Unknown error'
+          addLog(`Warning: Failed to set CORS - ${corsMsg}`)
+          // Don't fail provisioning for CORS errors
+        }
+      }
 
       setProvisioning({ status: 'waiting-for-server' })
       addLog('Waiting for server to initialize (this takes 5-10 minutes)...')
@@ -159,13 +206,25 @@ export function ProvisioningStep({
 
         if (res.ok) {
           const status = await res.json()
+
+          // Check for our error response from failed cloud-init
+          if (status.success === false) {
+            log(`Installation failed: ${status.message || 'Unknown error'}`)
+            throw new Error(status.message || 'Installation failed on server')
+          }
+
+          // Check for Foundry running
           if (status.version) {
             log(`Foundry v${status.version} is running!`)
             return
           }
         }
-      } catch {
-        // Server not ready yet or rebooting
+      } catch (err) {
+        // Re-throw installation failures (from our error response)
+        if (err instanceof Error && err.message.includes('Installation failed')) {
+          throw err
+        }
+        // Server not ready yet or rebooting - continue polling
       }
 
       if (i % 3 === 0 && i > 0) {

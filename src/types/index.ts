@@ -1,5 +1,16 @@
+import type { ProviderId } from '../api/providers/types'
+
 export interface WizardState {
   currentStep: number
+  provider: ProviderId
+  compute: {
+    apiKey: string
+    validated: boolean
+    regions: Region[]
+    sizes: Size[]
+    selectedRegion: string
+    selectedSize: string
+  }
   digitalOcean: {
     apiKey: string
     validated: boolean
@@ -22,6 +33,9 @@ export interface WizardState {
     selectedRegion: string | null // region of selected/created space
     newSpaceName: string
     credentials: SpacesCredentials | null
+    // Temp full-access key for CORS setup (DO only) - deleted after provisioning
+    tempKeyId: string | null
+    tempKeyCredentials: SpacesCredentials | null
   }
   foundry: {
     downloadUrl: string
@@ -55,12 +69,16 @@ export interface Size {
   slug: string
   description: string
   priceMonthly: number
+  pricesByRegion?: Record<string, number> // For providers with region-specific pricing
+  unavailableInRegions?: string[] // Regions where this size is unavailable
+  currency?: 'USD' | 'EUR'
   memory: number
   vcpus: number
   disk: number
   category: DropletCategory
   categoryLabel: string
   diskType: 'SSD' | 'NVMe SSD'
+  tierHint?: 'budget' | 'standard' | 'performance'
 }
 
 export interface Zone {

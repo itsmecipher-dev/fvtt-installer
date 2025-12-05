@@ -18,7 +18,7 @@ import {
 import { Button } from '../ui/Button'
 import { Alert } from '../ui/Alert'
 import { Collapsible } from '../ui/Collapsible'
-import * as doApi from '../../api/digitalocean'
+import { providerDisplayInfo } from '../../api/providers/metadata'
 import type { WizardState } from '../../types'
 
 interface Props {
@@ -100,7 +100,12 @@ export function SummaryStep({ state }: Props) {
   const fullDomain = `${state.cloudflare.subdomain}.${selectedZone?.name || ''}`
   const serverIp = state.provisioning.dropletIp || 'unknown'
 
-  const spacesRegion = state.spaces.selectedRegion || doApi.getSpacesRegions()[0]
+  // Provider-specific info
+  const provider = providerDisplayInfo[state.provider]
+  const isDigitalOcean = state.provider === 'digitalocean'
+  const serverRegion = state.compute.selectedRegion
+
+  const spacesRegion = state.spaces.selectedRegion || ''
 
   const sshCommand = `ssh -i ${state.server.name}-ssh-key.pem foundry@${serverIp}`
 
@@ -109,12 +114,17 @@ export function SummaryStep({ state }: Props) {
   }
 
   const handleExport = () => {
+    const storageEndpoint = isDigitalOcean
+      ? `https://${spacesRegion}.digitaloceanspaces.com`
+      : `https://${spacesRegion}.your-objectstorage.com` // Hetzner Object Storage
+
     const data = {
+      provider: provider.displayName,
       server: {
         name: state.server.name,
         ip: serverIp,
         domain: fullDomain,
-        region: state.digitalOcean.selectedRegion,
+        region: serverRegion,
       },
       foundry: {
         url: `https://${fullDomain}`,
@@ -126,12 +136,11 @@ export function SummaryStep({ state }: Props) {
         user: 'foundry',
         command: sshCommand,
       },
-      spaces: state.spaces.enabled
+      storage: state.spaces.enabled
         ? {
             bucket: state.spaces.newSpaceName,
             region: spacesRegion,
-            endpoint: `https://${spacesRegion}.digitaloceanspaces.com`,
-            url: `https://${state.spaces.newSpaceName}.${spacesRegion}.digitaloceanspaces.com`,
+            endpoint: storageEndpoint,
           }
         : null,
       pm2Commands: {
@@ -146,7 +155,7 @@ export function SummaryStep({ state }: Props) {
         foundryUpdates: 'Use Foundry Setup → Update Software tab',
       },
       links: {
-        digitalOcean: 'https://cloud.digitalocean.com/droplets',
+        providerDashboard: provider.website,
         cloudflare: 'https://dash.cloudflare.com',
         foundryLicenses: 'https://foundryvtt.com/me/licenses',
       },
@@ -208,7 +217,7 @@ export function SummaryStep({ state }: Props) {
           </div>
           <div>
             <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Region</p>
-            <p className="text-white">{state.digitalOcean.selectedRegion}</p>
+            <p className="text-white">{serverRegion}</p>
           </div>
           <div>
             <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Server Name</p>
@@ -221,17 +230,26 @@ export function SummaryStep({ state }: Props) {
       <Section title="Server Access" icon={Key}>
         <div className="space-y-4">
           <div>
-            <h4 className="font-medium text-white mb-2">Option 1: DigitalOcean Console (Easiest)</h4>
+            <h4 className="font-medium text-white mb-2">Option 1: {provider.displayName} Console (Easiest)</h4>
             <p className="text-sm text-slate-400 mb-2">
-              Access your server directly from the DigitalOcean dashboard—no SSH client needed:
+              Access your server directly from the {provider.displayName} dashboard—no SSH client needed:
             </p>
-            <ol className="space-y-1 text-sm text-slate-300 list-decimal list-inside mb-3">
-              <li>Go to <a href="https://cloud.digitalocean.com/droplets" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">DigitalOcean Droplets</a></li>
-              <li>Click on your droplet ({state.server.name})</li>
-              <li>Select "Access" in the left menu</li>
-              <li>Click "Launch Droplet Console"</li>
-              <li>Switch to the foundry user: <code className="bg-slate-800 px-1 rounded">su - foundry</code></li>
-            </ol>
+            {isDigitalOcean ? (
+              <ol className="space-y-1 text-sm text-slate-300 list-decimal list-inside mb-3">
+                <li>Go to <a href="https://cloud.digitalocean.com/droplets" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">DigitalOcean Droplets</a></li>
+                <li>Click on your droplet ({state.server.name})</li>
+                <li>Select "Access" in the left menu</li>
+                <li>Click "Launch Droplet Console"</li>
+                <li>Switch to the foundry user: <code className="bg-slate-800 px-1 rounded">su - foundry</code></li>
+              </ol>
+            ) : (
+              <ol className="space-y-1 text-sm text-slate-300 list-decimal list-inside mb-3">
+                <li>Go to <a href="https://console.hetzner.cloud" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Hetzner Cloud Console</a></li>
+                <li>Click on your server ({state.server.name})</li>
+                <li>Click the "Console" button (terminal icon)</li>
+                <li>Switch to the foundry user: <code className="bg-slate-800 px-1 rounded">su - foundry</code></li>
+              </ol>
+            )}
           </div>
 
           <div>
@@ -273,12 +291,12 @@ export function SummaryStep({ state }: Props) {
         </div>
       </Section>
 
-      {/* Spaces Storage */}
-      <Section title="Asset Storage (Spaces)" icon={Database} defaultOpen={state.spaces.enabled}>
+      {/* Object Storage */}
+      <Section title="Asset Storage (S3-Compatible)" icon={Database} defaultOpen={state.spaces.enabled}>
         {state.spaces.enabled ? (
           <>
-            <Alert type="success" title="Spaces Configured">
-              Your server is configured to use DigitalOcean Spaces for asset storage.
+            <Alert type="success" title="Object Storage Configured">
+              Your server is configured to use {isDigitalOcean ? 'DigitalOcean Spaces' : 'S3-compatible storage'} for asset storage.
             </Alert>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
@@ -289,12 +307,6 @@ export function SummaryStep({ state }: Props) {
                 <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Region</p>
                 <p className="text-white">{spacesRegion}</p>
               </div>
-              <div className="sm:col-span-2">
-                <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Endpoint</p>
-                <p className="text-white font-mono text-sm break-all">
-                  https://{state.spaces.newSpaceName}.{spacesRegion}.digitaloceanspaces.com
-                </p>
-              </div>
             </div>
             <div className="mt-4">
               <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Config Location</p>
@@ -304,26 +316,20 @@ export function SummaryStep({ state }: Props) {
         ) : (
           <>
             <p className="text-sm text-slate-400 mb-3">
-              You didn't configure Spaces, but you can add it later. Here's how:
+              You didn't configure object storage, but you can add it later for storing large assets like maps and tokens.
             </p>
-            <Collapsible title="How to add Spaces storage later">
+            <Collapsible title="How to add S3-compatible storage later">
               <ol className="space-y-3 text-sm text-slate-300">
                 <li className="flex gap-2">
                   <span className="shrink-0 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold">1</span>
                   <span>
-                    Create a Space at{' '}
-                    <a href="https://cloud.digitalocean.com/spaces" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
-                      DigitalOcean Spaces
-                    </a>
+                    Create a bucket at your preferred S3-compatible provider (DigitalOcean Spaces, Hetzner Object Storage, AWS S3, etc.). Set visibility to <strong>Public (read-only)</strong> so players can access assets.
                   </span>
                 </li>
                 <li className="flex gap-2">
                   <span className="shrink-0 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold">2</span>
                   <span>
-                    Create an access key at{' '}
-                    <a href="https://cloud.digitalocean.com/spaces/access_keys" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
-                      Spaces Access Keys
-                    </a>
+                    Create access credentials (Access Key ID and Secret Access Key) for write access
                   </span>
                 </li>
                 <li className="flex gap-2">
@@ -334,23 +340,24 @@ export function SummaryStep({ state }: Props) {
               <div className="mt-3">
                 <CodeBlock>{`cat > /home/foundry/foundrydata/Config/aws.json << 'EOF'
 {
-  "accessKeyId": "YOUR_ACCESS_KEY_ID",
-  "secretAccessKey": "YOUR_SECRET_ACCESS_KEY",
-  "region": "nyc3",
-  "endpoint": "https://nyc3.digitaloceanspaces.com",
-  "bucket": "your-bucket-name"
+  "buckets": ["your-bucket-name"],
+  "region": "your-region",
+  "endpoint": "https://your-endpoint.com",
+  "credentials": {
+    "accessKeyId": "YOUR_ACCESS_KEY_ID",
+    "secretAccessKey": "YOUR_SECRET_ACCESS_KEY"
+  }
 }
 EOF`}</CodeBlock>
               </div>
               <ol className="mt-3 space-y-3 text-sm text-slate-300" start={4}>
                 <li className="flex gap-2">
                   <span className="shrink-0 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold">4</span>
-                  <span>Add the <code className="bg-slate-800 px-1 rounded">awsConfig</code> reference to options.json:</span>
+                  <span>Edit options.json to add the <code className="bg-slate-800 px-1 rounded">awsConfig</code> reference:</span>
                 </li>
               </ol>
               <div className="mt-3">
-                <CodeBlock>{`# Edit the options.json file
-nano /home/foundry/foundrydata/Config/options.json
+                <CodeBlock>{`nano /home/foundry/foundrydata/Config/options.json
 
 # Add this line inside the JSON object:
 "awsConfig": "aws.json"`}</CodeBlock>
@@ -419,9 +426,9 @@ nano /home/foundry/foundrydata/Config/options.json
             <li className="flex gap-2">
               <span>•</span>
               <span>
-                <strong>Delete your DigitalOcean API key</strong> from{' '}
-                <a href="https://cloud.digitalocean.com/account/api/tokens" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
-                  API settings
+                <strong>Delete your {provider.displayName} API {isDigitalOcean ? 'key' : 'token'}</strong> from{' '}
+                <a href={isDigitalOcean ? 'https://cloud.digitalocean.com/account/api/tokens' : 'https://console.hetzner.cloud'} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                  {isDigitalOcean ? 'API settings' : 'your project settings'}
                 </a>
                 . You don't need it anymore.
               </span>
@@ -464,12 +471,12 @@ nano /home/foundry/foundrydata/Config/options.json
             <ExternalLink className="w-4 h-4 text-slate-400" />
           </a>
           <a
-            href="https://cloud.digitalocean.com/droplets"
+            href={isDigitalOcean ? 'https://cloud.digitalocean.com/droplets' : 'https://console.hetzner.cloud'}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 p-3 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-colors"
           >
-            <span className="text-white">DigitalOcean Dashboard</span>
+            <span className="text-white">{provider.displayName} Dashboard</span>
             <ExternalLink className="w-4 h-4 text-slate-400" />
           </a>
           <a

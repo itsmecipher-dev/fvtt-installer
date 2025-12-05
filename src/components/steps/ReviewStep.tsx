@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Server, Globe, Key, Shield, Loader2, Clock } from 'lucide-react'
+import { Server, Globe, Key, Shield, Loader2, Clock, Database } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Alert } from '../ui/Alert'
 import { Input } from '../ui/Input'
-import * as doApi from '../../api/digitalocean'
+import { getCloudProvider, getProviderMetadata } from '../../api/providers'
 import type { WizardState } from '../../types'
 
 interface Props {
@@ -15,54 +15,79 @@ interface Props {
 }
 
 export function ReviewStep({ state, setServer, setMaintenance, onNext, onBack }: Props) {
-  const [existingDroplet, setExistingDroplet] = useState<{
-    id: number
+  const provider = state.provider
+  const providerMeta = getProviderMetadata(provider)
+  const cloudProvider = getCloudProvider(provider)
+
+  const [existingServer, setExistingServer] = useState<{
+    id: number | string
     name: string
     ip: string | null
   } | null>(null)
-  const [checkingDroplet, setCheckingDroplet] = useState(false)
+  const [checkingServer, setCheckingServer] = useState(false)
 
   const selectedZone = state.cloudflare.zones.find(
     (z) => z.id === state.cloudflare.selectedZone
   )
   const fullDomain = `${state.cloudflare.subdomain}.${selectedZone?.name || ''}`
 
-  const selectedRegion = state.digitalOcean.regions.find(
-    (r) => r.slug === state.digitalOcean.selectedRegion
-  )
+  // Get region based on provider
+  const getSelectedRegion = () => {
+    if (provider === 'digitalocean') {
+      return state.digitalOcean.regions.find(r => r.slug === state.digitalOcean.selectedRegion)
+    }
+    return state.compute.regions.find(r => r.slug === state.compute.selectedRegion)
+  }
+  const selectedRegion = getSelectedRegion()
 
-  const checkForExistingDroplet = useCallback(async () => {
+  // Get selected size based on provider
+  const getSelectedSize = () => {
+    if (provider === 'digitalocean') {
+      return state.digitalOcean.selectedSize
+    }
+    return state.compute.selectedSize
+  }
+
+  // Get API key based on provider
+  const getApiKey = () => {
+    if (provider === 'digitalocean') {
+      return state.digitalOcean.apiKey
+    }
+    return state.compute.apiKey
+  }
+
+  const checkForExistingServer = useCallback(async () => {
     if (!state.server.name) {
-      setExistingDroplet(null)
+      setExistingServer(null)
       return
     }
 
-    setCheckingDroplet(true)
+    setCheckingServer(true)
     try {
-      const droplet = await doApi.checkExistingDroplet(
-        state.digitalOcean.apiKey,
+      const server = await cloudProvider.checkExistingServer(
+        getApiKey(),
         state.server.name
       )
-      setExistingDroplet(droplet)
+      setExistingServer(server)
     } catch {
-      setExistingDroplet(null)
+      setExistingServer(null)
     } finally {
-      setCheckingDroplet(false)
+      setCheckingServer(false)
     }
-  }, [state.digitalOcean.apiKey, state.server.name])
+  }, [cloudProvider, state.server.name, provider, state.digitalOcean.apiKey, state.compute.apiKey])
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      checkForExistingDroplet()
+      checkForExistingServer()
     }, 500)
     return () => clearTimeout(timer)
-  }, [checkForExistingDroplet])
+  }, [checkForExistingServer])
 
   return (
     <div className="space-y-6">
       <Alert type="warning" title="Ready to Deploy">
-        Review your configuration below. This will create a new DigitalOcean
-        droplet and configure DNS. You'll be charged by DigitalOcean for the
+        Review your configuration below. This will create a new {providerMeta.displayName}{' '}
+        server and configure DNS. You'll be charged by {providerMeta.displayName} for the
         server.
       </Alert>
 
@@ -76,27 +101,34 @@ export function ReviewStep({ state, setServer, setMaintenance, onNext, onBack }:
             name: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''),
           })
         }
-        hint="This is the name shown in your DigitalOcean dashboard"
+        hint={`This is the name shown in your ${providerMeta.displayName} dashboard`}
       />
 
-      {checkingDroplet && (
+      {checkingServer && (
         <div className="flex items-center gap-2 text-sm text-slate-400">
           <Loader2 className="w-4 h-4 animate-spin" />
-          Checking for existing droplets...
+          Checking for existing servers...
         </div>
       )}
 
-      {existingDroplet && !checkingDroplet && (
-        <Alert type="warning" title="A server with this name already exists">
+      {existingServer && !checkingServer && (
+        <Alert type={provider === 'hetzner' ? 'error' : 'warning'} title="A server with this name already exists">
           <div className="space-y-2">
             <p>
-              <strong>{existingDroplet.name}</strong> is already running
-              {existingDroplet.ip && ` at ${existingDroplet.ip}`}.
+              <strong>{existingServer.name}</strong> is already running
+              {existingServer.ip && ` at ${existingServer.ip}`}.
             </p>
-            <p className="text-sm">
-              If you continue, a <strong>new server</strong> will be created with the same name.
-              Consider using a different name to avoid confusion, or delete the existing server first.
-            </p>
+            {provider === 'hetzner' ? (
+              <p className="text-sm">
+                Hetzner does not allow duplicate server names.
+                Please <strong>choose a different name</strong> or delete the existing server first.
+              </p>
+            ) : (
+              <p className="text-sm">
+                If you continue, a <strong>new server</strong> will be created with the same name.
+                Consider using a different name to avoid confusion, or delete the existing server first.
+              </p>
+            )}
           </div>
         </Alert>
       )}
@@ -105,7 +137,7 @@ export function ReviewStep({ state, setServer, setMaintenance, onNext, onBack }:
         <div className="p-4 bg-slate-900/50 rounded-lg border border-slate-700">
           <div className="flex items-center gap-2 mb-3">
             <Server className="w-5 h-5 text-blue-400" />
-            <h3 className="font-medium text-white">Server</h3>
+            <h3 className="font-medium text-white">Server ({providerMeta.displayName})</h3>
           </div>
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between">
@@ -114,7 +146,7 @@ export function ReviewStep({ state, setServer, setMaintenance, onNext, onBack }:
             </div>
             <div className="flex justify-between">
               <dt className="text-slate-400">Size</dt>
-              <dd className="text-white">{state.digitalOcean.selectedSize}</dd>
+              <dd className="text-white">{getSelectedSize()}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-slate-400">OS</dt>
@@ -180,6 +212,35 @@ export function ReviewStep({ state, setServer, setMaintenance, onNext, onBack }:
           </dl>
         </div>
 
+        <div className="p-4 bg-slate-900/50 rounded-lg border border-slate-700">
+          <div className="flex items-center gap-2 mb-3">
+            <Database className="w-5 h-5 text-orange-400" />
+            <h3 className="font-medium text-white">Asset Storage</h3>
+          </div>
+          <dl className="space-y-2 text-sm">
+            {state.spaces.enabled ? (
+              <>
+                <div className="flex justify-between">
+                  <dt className="text-slate-400">Bucket</dt>
+                  <dd className="text-white">{state.spaces.newSpaceName}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-slate-400">Region</dt>
+                  <dd className="text-white">{state.spaces.selectedRegion}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-slate-400">Provider</dt>
+                  <dd className="text-white">{provider === 'digitalocean' ? 'DO Spaces' : 'Hetzner Object Storage'}</dd>
+                </div>
+              </>
+            ) : (
+              <div className="text-slate-400">
+                Not configured (local storage only)
+              </div>
+            )}
+          </dl>
+        </div>
+
         <div className="p-4 bg-slate-900/50 rounded-lg border border-slate-700 sm:col-span-2">
           <div className="flex items-center gap-2 mb-3">
             <Clock className="w-5 h-5 text-cyan-400" />
@@ -212,7 +273,7 @@ export function ReviewStep({ state, setServer, setMaintenance, onNext, onBack }:
         <h3 className="font-medium text-white mb-2">What happens next?</h3>
         <ol className="space-y-1 text-sm text-slate-300 list-decimal list-inside">
           <li>An SSH key will be generated for secure access</li>
-          <li>A new droplet will be created on DigitalOcean</li>
+          <li>A new server will be created on {providerMeta.displayName}</li>
           <li>DNS will be configured on Cloudflare</li>
           <li>Foundry VTT will be installed and started</li>
           <li>SSL certificate will be automatically obtained</li>
@@ -226,7 +287,10 @@ export function ReviewStep({ state, setServer, setMaintenance, onNext, onBack }:
         <Button variant="secondary" onClick={onBack}>
           Back
         </Button>
-        <Button onClick={onNext} disabled={!state.server.name}>
+        <Button
+          onClick={onNext}
+          disabled={!state.server.name || (provider === 'hetzner' && !!existingServer)}
+        >
           Deploy Server
         </Button>
       </div>

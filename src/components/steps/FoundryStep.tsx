@@ -164,17 +164,6 @@ export function FoundryStep({ state, setFoundry, onNext, onBack }: Props) {
               {error && username && password && (
                 <Alert type="error">{error}</Alert>
               )}
-
-              <Button onClick={handleLogin} disabled={loading || !username || !password}>
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Logging in...
-                  </>
-                ) : (
-                  'Login & Get Licenses'
-                )}
-              </Button>
             </>
           ) : (
             <>
@@ -243,6 +232,16 @@ export function FoundryStep({ state, setFoundry, onNext, onBack }: Props) {
             <div className="flex justify-between">
               <Button variant="secondary" onClick={onBack}>
                 Back
+              </Button>
+              <Button onClick={handleLogin} disabled={loading || !username || !password}>
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Logging in...
+                  </>
+                ) : (
+                  'Login & Get Licenses'
+                )}
               </Button>
             </div>
           )}
