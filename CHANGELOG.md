@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2025-12-05
+
+### Added
+- **Multi-provider support** with Hetzner Cloud alongside DigitalOcean
+- Provider selection step with visual cards showing pricing and features
+- Hetzner Object Storage integration for asset storage
+- Generic S3 worker endpoints (`/s3/validate`, `/s3/create-bucket`, `/s3/set-cors`)
+- Cloud-init error page when Foundry download fails (with fake `/api/status` for detection)
+- Worker README documentation for all API endpoints
+- Duplicate server name blocking for Hetzner (which doesn't allow duplicates)
+
+### Changed
+- Refactored provider code into abstraction layer (`src/api/providers/`)
+- Server name now defaults to subdomain (synced from Cloudflare step)
+- Moved Foundry login button to right side for UI consistency
+- CORS setup now uses temp full-access key (fixes 403 errors with scoped keys)
+
+### Fixed
+- CORS configuration failing with DigitalOcean scoped Spaces keys
+- Silent failures when Foundry download URL expires
+
 ## [1.1.0] - 2025-12-02
 
 ### Added
