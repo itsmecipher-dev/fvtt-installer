@@ -5,6 +5,7 @@ interface SizeSelectorProps {
   sizes: Size[]
   value: string
   onChange: (value: string) => void
+  selectedRegion?: string // For providers with region-specific pricing
 }
 
 interface TierConfig {
@@ -45,14 +46,26 @@ const TIER_CONFIGS: TierConfig[] = [
   },
 ]
 
-function getSizesForTier(sizes: Size[], memory: number, vcpus: number): Size[] {
-  const filtered = sizes
-    .filter((s) => s.memory === memory && s.vcpus === vcpus)
-    // Exclude premium CPU-optimized tiers (c-*, c2-*)
-    .filter((s) => !s.slug.startsWith('c-') && !s.slug.startsWith('c2-'))
-    .sort((a, b) => a.priceMonthly - b.priceMonthly)
+function getSizesForTier(sizes: Size[], tierId: string, memory: number, vcpus: number): Size[] {
+  // Check if sizes have tierHint (Hetzner) - use that for grouping
+  const hasTierHints = sizes.some((s) => s.tierHint)
 
-  // Remove duplicates at same price point (keep first one, prefer AMD over Intel at same price)
+  let filtered: Size[]
+  if (hasTierHints) {
+    // Use tierHint for grouping (Hetzner)
+    filtered = sizes
+      .filter((s) => s.tierHint === tierId)
+      .sort((a, b) => a.priceMonthly - b.priceMonthly)
+  } else {
+    // Use memory/vcpu matching (DigitalOcean)
+    filtered = sizes
+      .filter((s) => s.memory === memory && s.vcpus === vcpus)
+      // Exclude premium CPU-optimized tiers (c-*, c2-*)
+      .filter((s) => !s.slug.startsWith('c-') && !s.slug.startsWith('c2-'))
+      .sort((a, b) => a.priceMonthly - b.priceMonthly)
+  }
+
+  // Remove duplicates at same price point (keep first one)
   const seen = new Map<number, Size>()
   for (const size of filtered) {
     if (!seen.has(size.priceMonthly)) {
@@ -70,7 +83,13 @@ interface SizeRating {
   diskTooltip: string
 }
 
-function getSizeLabel(size: Size): { label: string; sublabel?: string } {
+function getSizeLabel(size: Size): { label: string; sublabel?: string; warning?: string } {
+  // Hetzner server types (official Hetzner terminology)
+  if (size.slug.startsWith('ccx')) return { label: size.slug.toUpperCase(), sublabel: 'General Purpose, Dedicated' }
+  if (size.slug.startsWith('cpx')) return { label: size.slug.toUpperCase(), sublabel: 'Regular Performance, Shared' }
+  if (size.slug.startsWith('cx')) return { label: size.slug.toUpperCase(), sublabel: 'Cost-Optimized, Shared', warning: 'Limited Availability' }
+
+  // DigitalOcean server types
   const isAmd = size.slug.includes('-amd')
   const isIntel = size.slug.includes('-intel')
 
@@ -80,6 +99,33 @@ function getSizeLabel(size: Size): { label: string; sublabel?: string } {
 }
 
 function getSizeRating(size: Size): SizeRating {
+  // Hetzner server types
+  if (size.slug.startsWith('ccx')) {
+    return {
+      cpuStars: 3,
+      diskStars: 3,
+      cpuTooltip: 'General Purpose - Dedicated resources, guaranteed performance',
+      diskTooltip: 'Fast NVMe SSD storage',
+    }
+  }
+  if (size.slug.startsWith('cpx')) {
+    return {
+      cpuStars: 2,
+      diskStars: 2,
+      cpuTooltip: 'Regular Performance - Shared AMD, great value',
+      diskTooltip: 'Fast NVMe SSD storage',
+    }
+  }
+  if (size.slug.startsWith('cx')) {
+    return {
+      cpuStars: 1,
+      diskStars: 2,
+      cpuTooltip: 'Cost-Optimized - Shared Intel, limited availability',
+      diskTooltip: 'Fast NVMe SSD storage',
+    }
+  }
+
+  // DigitalOcean server types
   const isAmd = size.slug.includes('-amd')
   const isIntel = size.slug.includes('-intel')
 
@@ -123,10 +169,22 @@ function Stars({ count, max = 3 }: { count: number; max?: number }) {
   )
 }
 
-export function SizeSelector({ sizes, value, onChange }: SizeSelectorProps) {
+function formatPrice(price: number, currency: 'USD' | 'EUR'): string {
+  const symbol = currency === 'EUR' ? '€' : '$'
+  return `${symbol}${price.toFixed(2)}`
+}
+
+function getPriceForRegion(size: Size, region?: string): number {
+  if (region && size.pricesByRegion && size.pricesByRegion[region] !== undefined) {
+    return size.pricesByRegion[region]
+  }
+  return size.priceMonthly
+}
+
+export function SizeSelector({ sizes, value, onChange, selectedRegion }: SizeSelectorProps) {
   // Build tiers dynamically from available sizes
   const tiers = TIER_CONFIGS.map((config) => {
-    const tierSizes = getSizesForTier(sizes, config.memory, config.vcpus)
+    const tierSizes = getSizesForTier(sizes, config.id, config.memory, config.vcpus)
     return { ...config, sizes: tierSizes }
   }).filter((tier) => tier.sizes.length > 0)
 
@@ -151,8 +209,8 @@ export function SizeSelector({ sizes, value, onChange }: SizeSelectorProps) {
           Note: downsizing disk space isn't possible, only CPU/RAM.
         </p>
         <p>
-          The <strong className="text-slate-300">Intel and AMD</strong> options are noticeably snappier than Basic.
-          Only choose Basic if budget is a major concern.
+          The <strong className="text-slate-300">Standard tier</strong> offers the best balance of price and performance.
+          Budget is fine for light usage; Performance is overkill for most games.
         </p>
       </div>
 
@@ -189,16 +247,20 @@ export function SizeSelector({ sizes, value, onChange }: SizeSelectorProps) {
                     const isSelected = value === size.slug
                     const rating = getSizeRating(size)
                     const sizeLabel = getSizeLabel(size)
+                    const isUnavailable = !!(selectedRegion && size.unavailableInRegions?.includes(selectedRegion))
 
                     return (
                       <button
                         key={size.slug}
                         type="button"
-                        onClick={() => onChange(size.slug)}
+                        onClick={() => !isUnavailable && onChange(size.slug)}
+                        disabled={isUnavailable}
                         className={`relative p-3 rounded-lg border text-center transition-all ${
-                          isSelected
-                            ? 'border-blue-500 bg-blue-500/20'
-                            : 'border-slate-600 hover:border-slate-500 bg-slate-800/50'
+                          isUnavailable
+                            ? 'border-slate-700 bg-slate-900/50 opacity-50 cursor-not-allowed'
+                            : isSelected
+                              ? 'border-blue-500 bg-blue-500/20'
+                              : 'border-slate-600 hover:border-slate-500 bg-slate-800/50'
                         }`}
                       >
                         {/* Selection indicator */}
@@ -218,11 +280,16 @@ export function SizeSelector({ sizes, value, onChange }: SizeSelectorProps) {
                           {sizeLabel.sublabel && (
                             <span className="block text-[10px] text-slate-500 font-normal">{sizeLabel.sublabel}</span>
                           )}
+                          {isUnavailable ? (
+                            <span className="block text-[10px] text-red-400 font-normal">❌ Unavailable in region</span>
+                          ) : sizeLabel.warning && (
+                            <span className="block text-[10px] text-amber-400 font-normal">⚠ {sizeLabel.warning}</span>
+                          )}
                         </div>
 
                         {/* Price */}
                         <div className="text-xl font-bold text-white">
-                          ${size.priceMonthly}
+                          {formatPrice(getPriceForRegion(size, selectedRegion), size.currency || 'USD')}
                           <span className="text-xs font-normal text-slate-400">/mo</span>
                         </div>
 

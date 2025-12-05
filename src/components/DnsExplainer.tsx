@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Globe, Building2, Server, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react'
-import { siDigitalocean, siCloudflare } from 'simple-icons'
+import { siCloudflare } from 'simple-icons'
 
 function BrandIcon({ svg, color, className = "w-6 h-6" }: { svg: string; color: string; className?: string }) {
   return (
@@ -139,15 +139,14 @@ const SLIDES: Slide[] = [
           <ArrowRight className="w-4 h-4 text-slate-600" />
           <div className="flex flex-col items-center gap-1">
             <div className="w-10 h-10 rounded-lg bg-blue-500/30 border border-blue-500/50 flex items-center justify-center">
-              <BrandIcon svg={siDigitalocean.svg} color="#0080FF" className="w-5 h-5" />
+              <Server className="w-5 h-5 text-blue-400" />
             </div>
-            <span className="text-[10px] text-slate-500">DigitalOcean</span>
+            <span className="text-[10px] text-slate-500">Your Server</span>
           </div>
         </div>
         <div className="space-y-2 text-sm">
           <p className="text-slate-300">
-            <strong className="text-orange-400">Cloudflare</strong> acts as your DNS provider. You point your domain's
-            nameservers to Cloudflare, and they handle:
+            <strong className="text-orange-400">Cloudflare</strong> acts as your DNS provider and handles:
           </p>
           <ul className="space-y-1 text-slate-400 ml-4">
             <li>• <span className="text-slate-300">DNS records</span> — pointing your domain to your server</li>
@@ -155,6 +154,9 @@ const SLIDES: Slide[] = [
             <li>• <span className="text-slate-300">DDoS protection</span> — blocking attacks</li>
             <li>• <span className="text-slate-300">Caching</span> — making your site faster</li>
           </ul>
+          <p className="text-slate-500 text-xs mt-2">
+            💡 If you registered your domain with Cloudflare, nameservers are already configured. Otherwise, you'll need to point your domain's nameservers to Cloudflare.
+          </p>
         </div>
         <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
           <p className="text-green-300 text-sm">

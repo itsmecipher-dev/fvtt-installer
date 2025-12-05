@@ -1,4 +1,5 @@
-// AWS Signature v4 implementation for DigitalOcean Spaces bucket creation
+// Generic AWS Signature v4 implementation for S3-compatible storage
+// Supports DigitalOcean Spaces and Hetzner Object Storage
 
 async function sha256(message: string): Promise<ArrayBuffer> {
   const encoder = new TextEncoder()
@@ -36,79 +37,85 @@ async function getSigningKey(
   return hmacSha256(kService, 'aws4_request')
 }
 
-interface CreateBucketRequest {
+interface S3ValidateRequest {
   accessKeyId: string
   secretAccessKey: string
+  endpoint: string
   region: string
   bucketName: string
   allowedOrigin?: string
 }
 
-interface SetCorsRequest {
+interface S3CreateBucketRequest {
   accessKeyId: string
   secretAccessKey: string
+  endpoint: string
+  region: string
+  bucketName: string
+}
+
+interface S3SetCorsRequest {
+  accessKeyId: string
+  secretAccessKey: string
+  endpoint: string
   region: string
   bucketName: string
   allowedOrigin: string
 }
 
-export async function handleSpacesCreateBucket(request: Request): Promise<Response> {
+export async function handleS3Validate(request: Request): Promise<Response> {
   if (request.method !== 'POST') {
     return jsonResponse({ error: 'Method not allowed' }, 405)
   }
 
-  let body: CreateBucketRequest
+  let body: S3ValidateRequest
   try {
     body = await request.json()
   } catch {
     return jsonResponse({ error: 'Invalid JSON body' }, 400)
   }
 
-  const { accessKeyId, secretAccessKey, region, bucketName, allowedOrigin } = body
+  const { accessKeyId, secretAccessKey, endpoint, region, bucketName, allowedOrigin } = body
 
-  if (!accessKeyId || !secretAccessKey || !region || !bucketName) {
+  if (!accessKeyId || !secretAccessKey || !endpoint || !region || !bucketName) {
     return jsonResponse({ error: 'Missing required fields' }, 400)
   }
 
   try {
-    await createSpacesBucket(accessKeyId, secretAccessKey, region, bucketName)
+    const valid = await validateS3Credentials(accessKeyId, secretAccessKey, endpoint, region, bucketName)
 
-    if (allowedOrigin) {
-      console.log('Setting CORS for bucket:', bucketName, 'origin:', allowedOrigin)
-      await putSpacesCors(accessKeyId, secretAccessKey, region, bucketName, allowedOrigin)
-      console.log('CORS set successfully')
-    } else {
-      console.log('No allowedOrigin provided, skipping CORS setup')
+    if (valid && allowedOrigin) {
+      await putBucketCors(accessKeyId, secretAccessKey, endpoint, region, bucketName, allowedOrigin)
     }
 
-    return jsonResponse({ success: true, bucket: bucketName, region })
+    return jsonResponse({ valid })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
-    return jsonResponse({ error: message }, 400)
+    return jsonResponse({ valid: false, error: message }, 200)
   }
 }
 
-export async function handleSpacesSetCors(request: Request): Promise<Response> {
+export async function handleS3SetCors(request: Request): Promise<Response> {
   if (request.method !== 'POST') {
     return jsonResponse({ error: 'Method not allowed' }, 405)
   }
 
-  let body: SetCorsRequest
+  let body: S3SetCorsRequest
   try {
     body = await request.json()
   } catch {
     return jsonResponse({ error: 'Invalid JSON body' }, 400)
   }
 
-  const { accessKeyId, secretAccessKey, region, bucketName, allowedOrigin } = body
+  const { accessKeyId, secretAccessKey, endpoint, region, bucketName, allowedOrigin } = body
 
-  if (!accessKeyId || !secretAccessKey || !region || !bucketName || !allowedOrigin) {
+  if (!accessKeyId || !secretAccessKey || !endpoint || !region || !bucketName || !allowedOrigin) {
     return jsonResponse({ error: 'Missing required fields' }, 400)
   }
 
   try {
     console.log('Setting CORS for bucket:', bucketName, 'origin:', allowedOrigin)
-    await putSpacesCors(accessKeyId, secretAccessKey, region, bucketName, allowedOrigin)
+    await putBucketCors(accessKeyId, secretAccessKey, endpoint, region, bucketName, allowedOrigin)
     return jsonResponse({ success: true })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
@@ -116,15 +123,110 @@ export async function handleSpacesSetCors(request: Request): Promise<Response> {
   }
 }
 
-async function putSpacesCors(
+export async function handleS3CreateBucket(request: Request): Promise<Response> {
+  if (request.method !== 'POST') {
+    return jsonResponse({ error: 'Method not allowed' }, 405)
+  }
+
+  let body: S3CreateBucketRequest
+  try {
+    body = await request.json()
+  } catch {
+    return jsonResponse({ error: 'Invalid JSON body' }, 400)
+  }
+
+  const { accessKeyId, secretAccessKey, endpoint, region, bucketName } = body
+
+  if (!accessKeyId || !secretAccessKey || !endpoint || !region || !bucketName) {
+    return jsonResponse({ error: 'Missing required fields' }, 400)
+  }
+
+  try {
+    await createS3Bucket(accessKeyId, secretAccessKey, endpoint, region, bucketName)
+    return jsonResponse({ success: true, bucket: bucketName, region })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return jsonResponse({ error: message }, 400)
+  }
+}
+
+async function validateS3Credentials(
   accessKeyId: string,
   secretAccessKey: string,
+  endpoint: string,
+  region: string,
+  bucketName: string
+): Promise<boolean> {
+  const url = new URL(endpoint)
+  const baseHost = url.host
+  const host = `${bucketName}.${baseHost}`
+  const bucketEndpoint = `https://${host}`
+  const service = 's3'
+
+  const now = new Date()
+  const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '')
+  const dateStamp = amzDate.slice(0, 8)
+
+  const payloadHash = toHex(await sha256(''))
+
+  const method = 'GET'
+  const canonicalUri = '/'
+  const canonicalQuerystring = ''
+  const canonicalHeaders = [
+    `host:${host}`,
+    `x-amz-content-sha256:${payloadHash}`,
+    `x-amz-date:${amzDate}`,
+  ].join('\n') + '\n'
+  const signedHeaders = 'host;x-amz-content-sha256;x-amz-date'
+
+  const canonicalRequest = [
+    method,
+    canonicalUri,
+    canonicalQuerystring,
+    canonicalHeaders,
+    signedHeaders,
+    payloadHash,
+  ].join('\n')
+
+  const algorithm = 'AWS4-HMAC-SHA256'
+  const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`
+  const stringToSign = [
+    algorithm,
+    amzDate,
+    credentialScope,
+    toHex(await sha256(canonicalRequest)),
+  ].join('\n')
+
+  const signingKey = await getSigningKey(secretAccessKey, dateStamp, region, service)
+  const signature = toHex(await hmacSha256(signingKey, stringToSign))
+
+  const authorization = `${algorithm} Credential=${accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`
+
+  const res = await fetch(bucketEndpoint, {
+    method,
+    headers: {
+      'Host': host,
+      'x-amz-date': amzDate,
+      'x-amz-content-sha256': payloadHash,
+      'Authorization': authorization,
+    },
+  })
+
+  return res.ok || res.status === 403
+}
+
+async function putBucketCors(
+  accessKeyId: string,
+  secretAccessKey: string,
+  endpoint: string,
   region: string,
   bucketName: string,
   allowedOrigin: string
 ): Promise<void> {
-  const host = `${bucketName}.${region}.digitaloceanspaces.com`
-  const endpoint = `https://${host}/?cors`
+  const url = new URL(endpoint)
+  const baseHost = url.host
+  const host = `${bucketName}.${baseHost}`
+  const bucketEndpoint = `https://${host}/?cors`
   const service = 's3'
 
   const corsXml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -165,8 +267,7 @@ async function putSpacesCors(
   ].join('\n')
 
   const algorithm = 'AWS4-HMAC-SHA256'
-  const signingRegion = 'us-east-1'
-  const credentialScope = `${dateStamp}/${signingRegion}/${service}/aws4_request`
+  const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`
   const stringToSign = [
     algorithm,
     amzDate,
@@ -174,12 +275,12 @@ async function putSpacesCors(
     toHex(await sha256(canonicalRequest)),
   ].join('\n')
 
-  const signingKey = await getSigningKey(secretAccessKey, dateStamp, signingRegion, service)
+  const signingKey = await getSigningKey(secretAccessKey, dateStamp, region, service)
   const signature = toHex(await hmacSha256(signingKey, stringToSign))
 
   const authorization = `${algorithm} Credential=${accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`
 
-  const res = await fetch(endpoint, {
+  const res = await fetch(bucketEndpoint, {
     method,
     headers: {
       'Host': host,
@@ -193,33 +294,30 @@ async function putSpacesCors(
 
   if (!res.ok) {
     const text = await res.text()
-    console.error('Failed to set CORS:', res.status, text)
-    throw new Error(`Failed to set CORS: ${res.status}`)
-  } else {
-    console.log('CORS PUT response:', res.status)
+    throw new Error(`Failed to set CORS: ${res.status} - ${text}`)
   }
 }
 
-async function createSpacesBucket(
+async function createS3Bucket(
   accessKeyId: string,
   secretAccessKey: string,
+  endpoint: string,
   region: string,
   bucketName: string
 ): Promise<void> {
-  // Virtual-hosted style: https://bucket-name.region.digitaloceanspaces.com/
-  const host = `${bucketName}.${region}.digitaloceanspaces.com`
-  const endpoint = `https://${host}`
+  const url = new URL(endpoint)
+  const baseHost = url.host
+  const host = `${bucketName}.${baseHost}`
+  const bucketEndpoint = `https://${host}`
   const service = 's3'
 
   const now = new Date()
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '')
   const dateStamp = amzDate.slice(0, 8)
 
-  // Empty body for bucket creation with virtual-hosted style
   const xmlBody = ''
   const payloadHash = toHex(await sha256(xmlBody))
 
-  // Canonical request - virtual-hosted style uses / as the URI
   const method = 'PUT'
   const canonicalUri = '/'
   const canonicalQuerystring = ''
@@ -239,10 +337,8 @@ async function createSpacesBucket(
     payloadHash,
   ].join('\n')
 
-  // String to sign - use us-east-1 as region for signing (DO Spaces requirement)
   const algorithm = 'AWS4-HMAC-SHA256'
-  const signingRegion = 'us-east-1'
-  const credentialScope = `${dateStamp}/${signingRegion}/${service}/aws4_request`
+  const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`
   const stringToSign = [
     algorithm,
     amzDate,
@@ -250,24 +346,12 @@ async function createSpacesBucket(
     toHex(await sha256(canonicalRequest)),
   ].join('\n')
 
-  // Calculate signature
-  const signingKey = await getSigningKey(secretAccessKey, dateStamp, signingRegion, service)
+  const signingKey = await getSigningKey(secretAccessKey, dateStamp, region, service)
   const signature = toHex(await hmacSha256(signingKey, stringToSign))
 
-  // Authorization header
   const authorization = `${algorithm} Credential=${accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`
 
-  console.log('Creating bucket:', {
-    endpoint,
-    host,
-    method,
-    canonicalUri,
-    signingRegion,
-    accessKeyId: accessKeyId.substring(0, 8) + '...',
-    amzDate,
-  })
-
-  const res = await fetch(endpoint, {
+  const res = await fetch(bucketEndpoint, {
     method,
     headers: {
       'Host': host,
@@ -277,19 +361,15 @@ async function createSpacesBucket(
     },
   })
 
-  console.log('Response status:', res.status)
-
   if (!res.ok) {
     const text = await res.text()
-    // Check for BucketAlreadyOwnedByYou (not an error - bucket exists and we own it)
     if (text.includes('BucketAlreadyOwnedByYou')) {
       return
     }
-    // Check for BucketAlreadyExists (owned by someone else)
     if (text.includes('BucketAlreadyExists')) {
-      throw new Error('This Space name is already taken. Please choose a different name.')
+      throw new Error('This bucket name is already taken. Please choose a different name.')
     }
-    throw new Error(`Failed to create Space: ${res.status} - ${text}`)
+    throw new Error(`Failed to create bucket: ${res.status} - ${text}`)
   }
 }
 

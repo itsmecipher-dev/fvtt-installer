@@ -1,0 +1,2 @@
+- Automatically use context7 for code generation and library documentation.
+- When working on todos, keep the docs in ./todos up to date
