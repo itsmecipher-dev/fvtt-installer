@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 2025-12-05
+
+### Added
+- PM2 log rotation via `pm2-logrotate` (10MB max, 7 files retained, compressed)
+
 ## [1.2.0] - 2025-12-05
 
 ### Added
