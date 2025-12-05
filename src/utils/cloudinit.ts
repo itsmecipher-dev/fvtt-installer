@@ -297,6 +297,13 @@ ${licenseStripped ? `
   - systemctl daemon-reload
   - systemctl enable pm2-foundry
 
+  # PM2 log rotation (10MB max, keep 7 files, compress old logs)
+  - sudo -u foundry HOME=/home/foundry pm2 install pm2-logrotate
+  - sudo -u foundry HOME=/home/foundry pm2 set pm2-logrotate:max_size 10M
+  - sudo -u foundry HOME=/home/foundry pm2 set pm2-logrotate:retain 7
+  - sudo -u foundry HOME=/home/foundry pm2 set pm2-logrotate:compress true
+  - sudo -u foundry HOME=/home/foundry pm2 set pm2-logrotate:rotateInterval '0 0 * * *'
+
   # Start Caddy
   - systemctl enable caddy
   - systemctl start caddy
