@@ -7,6 +7,11 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - Cloud-init YAML parsing failure caused by emoji in error HTML (thanks Anthony Gonzalez)
 - Added input sanitization to prevent non-ASCII characters from breaking cloud-init
+- Foundry download URL expiration - now downloads immediately at cloud-init start
+- Fresh download URL fetched at deploy time when using credentials flow
+- Empty "Technical details" on error page - now shows file size, type, and preview
+- Installer falsely reporting success when server showed error page
+- Polling now properly detects and surfaces download failures to UI
 
 ## [1.2.1] - 2025-12-05
 

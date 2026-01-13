@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Primary Meta Tags -->
+    <title>FAQ | Foundry VTT Cloud Installer</title>
+    <meta name="title" content="FAQ | Foundry VTT Cloud Installer" />
+    <meta name="description" content="Frequently asked questions about deploying Foundry VTT to the cloud. Learn about costs, requirements, and the installation process." />
+    <meta name="keywords" content="Foundry VTT, FAQ, virtual tabletop, cloud hosting, self-hosted, DigitalOcean, Hetzner" />
+    <meta name="author" content="Artificery" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://fvtt-installer.artificery.io/faq.html" />
+
+    <!-- Theme -->
+    <meta name="theme-color" content="#0f172a" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://fvtt-installer.artificery.io/faq.html" />
+    <meta property="og:title" content="FAQ | Foundry VTT Cloud Installer" />
+    <meta property="og:description" content="Frequently asked questions about deploying Foundry VTT to the cloud." />
+    <meta property="og:image" content="https://fvtt-installer.artificery.io/og-image.png" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://fvtt-installer.artificery.io/faq.html" />
+    <meta name="twitter:title" content="FAQ | Foundry VTT Cloud Installer" />
+    <meta name="twitter:description" content="Frequently asked questions about deploying Foundry VTT to the cloud." />
+    <meta name="twitter:image" content="https://fvtt-installer.artificery.io/og-image.png" />
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What's the difference between managed hosting and self-hosting?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Managed Foundry hosting (like The Forge, Molten Hosting, or Foundry Server) provides a turnkey solution where someone else handles server management. Pros: zero setup, automatic updates, support included. Cons: monthly fees ($5-15+/month), less control, potential limitations on modules or storage. Self-hosting with this installer gives you full control over your own server on DigitalOcean or Hetzner. Pros: lower cost (~$4-6/month), complete control, no restrictions on modules/storage. Cons: you handle updates and troubleshooting."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is Foundry VTT Cloud Installer?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Foundry VTT Cloud Installer is a free tool that automates deploying your own Foundry Virtual Tabletop server to cloud providers like DigitalOcean or Hetzner. It handles server setup, HTTPS certificates, domain configuration, and optional cloud storage—all in about 10 minutes."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How much does it cost to run a Foundry VTT server?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The installer itself is free. You only pay for cloud hosting: DigitalOcean starts at $6/month for their smallest droplet, Hetzner starts at around €4/month. Optional S3-compatible storage for assets costs extra based on usage. You also need a Foundry VTT license ($50 one-time purchase from foundryvtt.com)."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What do I need before starting?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "You need: 1) A Foundry VTT license with a valid timed download URL, 2) A DigitalOcean or Hetzner account, 3) A Cloudflare account with a domain, 4) API keys from each service. The wizard guides you through obtaining each of these."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why do I need Cloudflare?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Cloudflare provides free DNS management and enables automatic HTTPS certificate generation via Let's Encrypt. This gives your Foundry server a custom domain (like foundry.yourdomain.com) with secure connections, which is required for features like audio/video chat."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is my data secure?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. All API keys are used only in your browser to communicate directly with the cloud providers—they are never sent to or stored on our servers. The installer runs entirely client-side. Your Foundry server is hosted on your own cloud account, giving you full control."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is S3-compatible storage and do I need it?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "S3-compatible storage (like DigitalOcean Spaces or Hetzner Object Storage) lets you store game assets (maps, tokens, audio) separately from your server. It's optional but recommended for large asset libraries as it reduces server disk usage and makes backups easier."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I use this with an existing domain?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, as long as your domain's DNS is managed by Cloudflare. You can either transfer your domain to Cloudflare or just point your domain's nameservers to Cloudflare. The installer creates a subdomain (e.g., foundry.yourdomain.com) for your server."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How long does deployment take?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The entire process takes about 5-10 minutes: filling out the wizard takes 2-3 minutes, and automated server provisioning takes another 3-5 minutes. After that, your Foundry VTT server is ready to use."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What if something goes wrong during deployment?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The installer provides detailed logs during deployment. If something fails, you can delete the created resources from your cloud provider's dashboard and try again. Common issues are usually related to API key permissions or rate limits."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I update Foundry VTT after installation?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Foundry VTT can be updated through its built-in update system in the Setup screen. Log into your Foundry server as the administrator, go to Configuration, and use the Update Software button when new versions are available."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I set up the server manually instead?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes! If you prefer to set up your server manually or want to understand what's happening under the hood, we have a detailed step-by-step guide at artificery.io/guides/foundry/manual-server-setup. This covers the same process without automation."
+          }
+        }
+      ]
+    }
+    </script>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        background: linear-gradient(to bottom right, #0f172a, #1e293b);
+        color: #e2e8f0;
+        min-height: 100vh;
+        line-height: 1.6;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+      }
+      header {
+        text-align: center;
+        margin-bottom: 3rem;
+      }
+      .logo-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        text-decoration: none;
+        color: inherit;
+        margin-bottom: 1rem;
+      }
+      .logo-link:hover {
+        opacity: 0.9;
+      }
+      .logo {
+        width: 48px;
+        height: 48px;
+      }
+      h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(to right, #60a5fa, #a78bfa);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.5rem;
+      }
+      .subtitle {
+        color: #94a3b8;
+        font-size: 1.125rem;
+      }
+      .faq-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      .faq-item {
+        background: rgba(30, 41, 59, 0.5);
+        border: 1px solid #334155;
+        border-radius: 0.75rem;
+        overflow: hidden;
+      }
+      .faq-question {
+        width: 100%;
+        padding: 1.25rem;
+        background: none;
+        border: none;
+        color: #f1f5f9;
+        font-size: 1.125rem;
+        font-weight: 600;
+        text-align: left;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+      }
+      .faq-question:hover {
+        background: rgba(51, 65, 85, 0.3);
+      }
+      .faq-icon {
+        flex-shrink: 0;
+        width: 24px;
+        height: 24px;
+        transition: transform 0.2s;
+      }
+      .faq-item.open .faq-icon {
+        transform: rotate(180deg);
+      }
+      .faq-answer {
+        display: none;
+        padding: 0 1.25rem 1.25rem;
+        color: #cbd5e1;
+      }
+      .faq-item.open .faq-answer {
+        display: block;
+      }
+      .cta {
+        text-align: center;
+        margin-top: 3rem;
+        padding: 2rem;
+        background: rgba(30, 41, 59, 0.5);
+        border: 1px solid #334155;
+        border-radius: 0.75rem;
+      }
+      .cta h2 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        color: #f1f5f9;
+      }
+      .cta-button {
+        display: inline-block;
+        padding: 0.875rem 2rem;
+        background: linear-gradient(to right, #3b82f6, #8b5cf6);
+        color: white;
+        text-decoration: none;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        transition: opacity 0.2s;
+      }
+      .cta-button:hover {
+        opacity: 0.9;
+      }
+      footer {
+        text-align: center;
+        margin-top: 3rem;
+        padding-top: 2rem;
+        border-top: 1px solid #334155;
+        color: #64748b;
+      }
+      footer a {
+        color: #60a5fa;
+        text-decoration: none;
+      }
+      footer a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <a href="/" class="logo-link">
+          <img src="/logo.png" alt="FVTT Installer" class="logo" />
+          <span style="font-size: 1.25rem; font-weight: 600;">FVTT Installer</span>
+        </a>
+        <h1>Frequently Asked Questions</h1>
+        <p class="subtitle">Everything you need to know about deploying Foundry VTT to the cloud</p>
+      </header>
+
+      <div class="faq-list">
+        <div class="faq-item open">
+          <button class="faq-question">
+            What's the difference between managed hosting and self-hosting?
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p style="margin-bottom: 1rem;"><strong>Managed Foundry hosting</strong> (like The Forge, Molten Hosting, or Foundry Server) provides a turnkey solution where someone else handles server management. Pros: zero setup, automatic updates, support included. Cons: monthly fees ($5-15+/month), less control, potential limitations on modules or storage.</p>
+            <p style="margin-bottom: 1rem;"><strong>Self-hosting with this installer</strong> gives you full control over your own server on DigitalOcean or Hetzner. Pros: lower cost (~$4-6/month), complete control, no restrictions on modules/storage, learn how it works. Cons: you handle updates and troubleshooting (though it's straightforward).</p>
+            <p><strong>Bottom line:</strong> If you want hands-off convenience and don't mind paying more, use managed hosting. If you want lower costs, full control, and don't mind occasional maintenance, self-host with this installer.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            What is Foundry VTT Cloud Installer?
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>Foundry VTT Cloud Installer is a free tool that automates deploying your own Foundry Virtual Tabletop server to cloud providers like DigitalOcean or Hetzner. It handles server setup, HTTPS certificates, domain configuration, and optional cloud storage—all in about 10 minutes.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            How much does it cost to run a Foundry VTT server?
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>The installer itself is free. You only pay for cloud hosting: DigitalOcean starts at $6/month for their smallest droplet, Hetzner starts at around €4/month. Optional S3-compatible storage for assets costs extra based on usage. You also need a Foundry VTT license ($50 one-time purchase from foundryvtt.com).</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            What do I need before starting?
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>You need:</p>
+            <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+              <li>A Foundry VTT license with a valid timed download URL</li>
+              <li>A DigitalOcean or Hetzner account</li>
+              <li>A Cloudflare account with a domain</li>
+              <li>API keys from each service</li>
+            </ul>
+            <p style="margin-top: 0.5rem;">The wizard guides you through obtaining each of these.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            Why do I need Cloudflare?
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>Cloudflare provides free DNS management and enables automatic HTTPS certificate generation via Let's Encrypt. This gives your Foundry server a custom domain (like foundry.yourdomain.com) with secure connections, which is required for features like audio/video chat.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            Is my data secure?
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>Yes. All API keys are used only in your browser to communicate directly with the cloud providers—they are never sent to or stored on our servers. The installer runs entirely client-side. Your Foundry server is hosted on your own cloud account, giving you full control.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            What is S3-compatible storage and do I need it?
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>S3-compatible storage (like DigitalOcean Spaces or Hetzner Object Storage) lets you store game assets (maps, tokens, audio) separately from your server. It's optional but recommended for large asset libraries as it reduces server disk usage and makes backups easier.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            Can I use this with an existing domain?
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>Yes, as long as your domain's DNS is managed by Cloudflare. You can either transfer your domain to Cloudflare or just point your domain's nameservers to Cloudflare. The installer creates a subdomain (e.g., foundry.yourdomain.com) for your server.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            How long does deployment take?
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>The entire process takes about 5-10 minutes: filling out the wizard takes 2-3 minutes, and automated server provisioning takes another 3-5 minutes. After that, your Foundry VTT server is ready to use.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            What if something goes wrong during deployment?
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>The installer provides detailed logs during deployment. If something fails, you can delete the created resources from your cloud provider's dashboard and try again. Common issues are usually related to API key permissions or rate limits.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            How do I update Foundry VTT after installation?
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>Foundry VTT can be updated through its built-in update system in the Setup screen. Log into your Foundry server as the administrator, go to Configuration, and use the Update Software button when new versions are available.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            Can I set up the server manually instead?
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>Yes! If you prefer to set up your server manually or want to understand what's happening under the hood, we have a detailed step-by-step guide: <a href="https://www.artificery.io/guides/foundry/manual-server-setup" style="color: #60a5fa;">Manual Foundry VTT Server Setup Guide</a>. This covers the same process without automation.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="cta">
+        <h2>Ready to deploy your Foundry VTT server?</h2>
+        <a href="/" class="cta-button">Start Installation</a>
+      </div>
+
+      <footer>
+        <p>Built by <a href="https://artificery.io">Artificery</a></p>
+        <p style="margin-top: 0.5rem;">Foundry VTT is a trademark of Foundry Gaming, LLC.</p>
+      </footer>
+    </div>
+
+    <script>
+      document.querySelectorAll('.faq-question').forEach(button => {
+        button.addEventListener('click', () => {
+          const item = button.parentElement;
+          item.classList.toggle('open');
+        });
+      });
+    </script>
+  </body>
+</html>

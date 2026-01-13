@@ -41,6 +41,12 @@ export interface WizardState {
     downloadUrl: string
     licenseKey: string
     majorVersion: number // 11, 12, 13, etc. - determines startup script path
+    // Stored for fresh URL fetch at deploy time (credentials mode only)
+    credentials?: {
+      username: string
+      password: string
+      version: string // e.g., "351"
+    }
   }
   server: {
     name: string

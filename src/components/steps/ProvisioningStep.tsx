@@ -5,6 +5,7 @@ import { Alert } from '../ui/Alert'
 import { getCloudProvider, getStorageProvider, getProviderMetadata } from '../../api/providers'
 import * as cfApi from '../../api/cloudflare'
 import * as doApi from '../../api/digitalocean'
+import * as foundryApi from '../../api/foundry'
 import { generateSSHKeyPair, downloadPrivateKey } from '../../utils/ssh'
 import { generateCloudInit } from '../../utils/cloudinit'
 import type { WizardState, ProvisioningStatus, SSHKeyPair } from '../../types'
@@ -98,9 +99,28 @@ export function ProvisioningStep({
       if (storageConfig) {
         addLog(`Storage enabled: ${storageConfig.bucket} (${storageConfig.endpoint})`)
       }
+
+      // Fetch fresh download URL if credentials are available (prevents expiration)
+      let downloadUrl = state.foundry.downloadUrl
+      if (state.foundry.credentials) {
+        addLog('Fetching fresh Foundry download URL...')
+        const freshUrl = await foundryApi.getDownloadUrl(
+          state.foundry.credentials.username,
+          state.foundry.credentials.password,
+          state.foundry.credentials.version,
+          'node'
+        )
+        if (freshUrl.success && freshUrl.url) {
+          downloadUrl = freshUrl.url
+          addLog('Fresh download URL obtained')
+        } else {
+          addLog('Warning: Could not refresh URL, using cached URL')
+        }
+      }
+
       const cloudInit = generateCloudInit(
         fullDomain,
-        state.foundry.downloadUrl,
+        downloadUrl,
         state.foundry.licenseKey,
         state.foundry.majorVersion,
         provider,
@@ -221,7 +241,11 @@ export function ProvisioningStep({
         }
       } catch (err) {
         // Re-throw installation failures (from our error response)
-        if (err instanceof Error && err.message.includes('Installation failed')) {
+        if (err instanceof Error && (
+          err.message.includes('Installation failed') ||
+          err.message.includes('download failed') ||
+          err.message.includes('expired')
+        )) {
           throw err
         }
         // Server not ready yet or rebooting - continue polling
@@ -234,7 +258,23 @@ export function ProvisioningStep({
       await new Promise((r) => setTimeout(r, interval))
     }
 
+    // Timeout - check one more time if there's an error page
+    try {
+      const res = await fetch(`https://${domain}/api/status`, { signal: AbortSignal.timeout(5000) })
+      if (res.ok) {
+        const status = await res.json()
+        if (status.success === false) {
+          throw new Error(status.message || 'Installation failed on server')
+        }
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('failed')) {
+        throw err
+      }
+    }
+
     log('Server may still be starting. Check back in a few minutes.')
+    throw new Error('Timeout waiting for Foundry to start. Check the server manually.')
   }
 
   const handleDownloadKey = () => {

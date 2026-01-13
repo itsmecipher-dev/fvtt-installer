@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://fvtt-installer.artificery.io/sitemap.xml

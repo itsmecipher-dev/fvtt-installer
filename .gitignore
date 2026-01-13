@@ -30,3 +30,6 @@ dist-ssr
 
 # AI assistant config
 CLAUDE.md
+
+# Source files
+public/*.psd

@@ -88,6 +88,8 @@ export function FoundryStep({ state, setFoundry, onNext, onBack }: Props) {
           downloadUrl: result.url,
           licenseKey: selectedLicense,
           majorVersion: selectedVersionData?.generation || 13,
+          // Store credentials for fresh URL fetch at deploy time
+          credentials: { username, password, version: selectedVersion },
         })
         onNext()
       }

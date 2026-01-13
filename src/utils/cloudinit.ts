@@ -101,6 +101,32 @@ write_files:
       APT::Periodic::AutocleanInterval "7";
 
 runcmd:
+  # PRIORITY: Download Foundry immediately (URL expires in 5 min)
+  - mkdir -p /home/foundry
+  - |
+    cd /home/foundry
+    echo "Downloading Foundry VTT (time-sensitive)..."
+    wget -q "${safeDownloadUrl}" -O foundry.zip
+
+    # Verify it's actually a zip file
+    if ! file foundry.zip | grep -q "Zip archive"; then
+      echo "ERROR: Download failed - not a valid zip file"
+      # Store detailed error for later display
+      echo "DOWNLOAD_FAILED" > /home/foundry/.download_status
+      {
+        echo "Download URL may have expired (5 min limit)."
+        echo ""
+        echo "File size: $(stat -c%s foundry.zip 2>/dev/null || echo 0) bytes"
+        echo "File type: $(file foundry.zip 2>/dev/null || echo unknown)"
+        echo ""
+        echo "Content preview:"
+        head -c 500 foundry.zip 2>/dev/null || echo "(empty)"
+      } > /home/foundry/.download_error
+    else
+      echo "DOWNLOAD_OK" > /home/foundry/.download_status
+      echo "Foundry downloaded successfully"
+    fi
+
   # Firewall
   - ufw default deny incoming
   - ufw default allow outgoing
@@ -204,17 +230,14 @@ ${licenseStripped ? `
     }
     EOFAWS
 ` : ''}
-  # Download and extract Foundry (with error handling)
+  # Check download status and extract (or show error page)
   - |
     cd /home/foundry
-    wget -q "${safeDownloadUrl}" -O foundry.zip
+    if [ "$(cat .download_status 2>/dev/null)" = "DOWNLOAD_FAILED" ]; then
+      echo "ERROR: Foundry download failed earlier"
 
-    # Verify it's actually a zip file
-    if ! file foundry.zip | grep -q "Zip archive"; then
-      echo "ERROR: Download failed - not a valid zip file"
-
-      # Capture error content for debugging (escape quotes for HTML)
-      ERROR_CONTENT=$(head -c 1000 foundry.zip 2>/dev/null | sed 's/</\\&lt;/g; s/>/\\&gt;/g' || echo "Empty file")
+      # Capture error content for debugging
+      ERROR_CONTENT=$(cat .download_error 2>/dev/null | sed 's/</\\&lt;/g; s/>/\\&gt;/g' || echo "Empty or expired URL")
 
       # Create error directory structure
       mkdir -p /var/www/error/api
@@ -277,9 +300,11 @@ ${licenseStripped ? `
       exit 1
     fi
 
-    # Download successful - extract
+    # Download was successful - extract
+    echo "Extracting Foundry VTT..."
     unzip -q foundry.zip -d foundryvtt
     rm foundry.zip
+    rm -f .download_status .download_error
 
   # PM2 ecosystem config
   - |
