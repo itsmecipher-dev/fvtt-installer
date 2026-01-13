@@ -1,5 +1,12 @@
 import type { ProviderId } from '../api/providers/types'
 
+// Sanitize strings for YAML - remove non-printable and problematic characters
+function sanitizeForYaml(str: string): string {
+  return str
+    .replace(/[^\x20-\x7E]/g, '') // Keep only printable ASCII
+    .trim()
+}
+
 interface StorageConfig {
   accessKeyId: string
   secretAccessKey: string
@@ -21,10 +28,22 @@ export function generateCloudInit(
   storageConfig?: StorageConfig,
   maintenanceConfig: MaintenanceConfig = { updateHour: 4 }
 ): string {
+  // Sanitize all string inputs to prevent YAML parsing failures
+  const safeDomain = sanitizeForYaml(domain)
+  const safeDownloadUrl = sanitizeForYaml(foundryDownloadUrl)
+  const safeLicenseKey = sanitizeForYaml(foundryLicenseKey)
+  const safeStorage = storageConfig ? {
+    bucket: sanitizeForYaml(storageConfig.bucket),
+    region: sanitizeForYaml(storageConfig.region),
+    endpoint: sanitizeForYaml(storageConfig.endpoint),
+    accessKeyId: sanitizeForYaml(storageConfig.accessKeyId),
+    secretAccessKey: sanitizeForYaml(storageConfig.secretAccessKey),
+  } : undefined
+
   // v13+ uses main.js in root, v12 and earlier use resources/app/main.js
   const scriptPath = foundryMajorVersion >= 13 ? 'main.js' : 'resources/app/main.js'
   // Strip dashes from license key for license.json format
-  const licenseStripped = foundryLicenseKey ? foundryLicenseKey.replace(/-/g, '') : ''
+  const licenseStripped = safeLicenseKey ? safeLicenseKey.replace(/-/g, '') : ''
 
   return `#cloud-config
 package_update: true
@@ -135,7 +154,7 @@ ${provider === 'digitalocean' ? `
   - systemctl stop caddy
   - |
     cat > /etc/caddy/Caddyfile << EOFCADDY
-    ${domain} {
+    ${safeDomain} {
       reverse_proxy localhost:30000
     }
     EOFCADDY
@@ -149,7 +168,7 @@ ${provider === 'digitalocean' ? `
   - |
     cat > /home/foundry/foundrydata/Config/options.json << EOFOPTS
     {
-      "hostname": "${domain}",
+      "hostname": "${safeDomain}",
       "routePrefix": null,
       "sslCert": null,
       "sslKey": null,
@@ -164,23 +183,23 @@ ${licenseStripped ? `
   - |
     cat > /home/foundry/foundrydata/Config/license.json << EOFLIC
     {
-      "host": "${domain}",
+      "host": "${safeDomain}",
       "license": "${licenseStripped}",
       "version": "13.351",
       "time": "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
     }
     EOFLIC
-` : ''}${storageConfig ? `
+` : ''}${safeStorage ? `
   # S3-compatible storage config for Foundry
   - |
     cat > /home/foundry/foundrydata/Config/aws.json << EOFAWS
     {
-      "buckets": ["${storageConfig.bucket}"],
-      "region": "${storageConfig.region}",
-      "endpoint": "${storageConfig.endpoint}",
+      "buckets": ["${safeStorage.bucket}"],
+      "region": "${safeStorage.region}",
+      "endpoint": "${safeStorage.endpoint}",
       "credentials": {
-        "accessKeyId": "${storageConfig.accessKeyId}",
-        "secretAccessKey": "${storageConfig.secretAccessKey}"
+        "accessKeyId": "${safeStorage.accessKeyId}",
+        "secretAccessKey": "${safeStorage.secretAccessKey}"
       }
     }
     EOFAWS
@@ -188,7 +207,7 @@ ${licenseStripped ? `
   # Download and extract Foundry (with error handling)
   - |
     cd /home/foundry
-    wget -q "${foundryDownloadUrl}" -O foundry.zip
+    wget -q "${safeDownloadUrl}" -O foundry.zip
 
     # Verify it's actually a zip file
     if ! file foundry.zip | grep -q "Zip archive"; then
@@ -225,7 +244,7 @@ ${licenseStripped ? `
       </style>
     </head>
     <body>
-      <h1>⚠️ Installation Failed</h1>
+      <h1>Installation Failed</h1>
       <p>The Foundry VTT download failed. This usually means:</p>
       <ul>
         <li>The download URL expired (they're time-limited)</li>
@@ -246,7 +265,7 @@ ${licenseStripped ? `
 
       # Reconfigure Caddy to serve error files
       cat > /etc/caddy/Caddyfile << EOFCADDY
-    ${domain} {
+    ${safeDomain} {
       root * /var/www/error
       file_server
       header /api/status Content-Type application/json
@@ -254,7 +273,7 @@ ${licenseStripped ? `
     EOFCADDY
 
       systemctl restart caddy
-      echo "Error page deployed at https://${domain}"
+      echo "Error page deployed at https://${safeDomain}"
       exit 1
     fi
 
@@ -311,6 +330,6 @@ ${licenseStripped ? `
   # Final reboot to ensure clean state
   - reboot
 
-final_message: "Foundry VTT installation complete! Access at https://${domain}"
+final_message: "Foundry VTT installation complete! Access at https://${safeDomain}"
 `
 }
