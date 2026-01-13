@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.2] - 2026-01-13
+
+### Fixed
+- Cloud-init YAML parsing failure caused by emoji in error HTML (thanks Anthony Gonzalez)
+- Added input sanitization to prevent non-ASCII characters from breaking cloud-init
+
 ## [1.2.1] - 2025-12-05
 
 ### Added
