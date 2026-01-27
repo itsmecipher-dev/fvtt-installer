@@ -53,6 +53,7 @@ packages:
   - curl
   - wget
   - unzip
+  - file
   - ufw
   - fail2ban
   - jq
